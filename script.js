@@ -5,10 +5,8 @@ console.log('Script 로드 시작:', new Date().toLocaleTimeString());
 
 const CONFIG = {
     API_BASE_URL: '/.netlify/functions',
-    // YouTube 영상 설정 (Privacy-Enhanced 모드 사용)
-    YOUTUBE_VIDEO_ID: 'HggDt3GUGYo', // YouTube 영상 ID (순수 ID만 사용)
-    GOOGLE_DRIVE_VIDEO_ID: '1EMOjJ1Fju4JNvxUCbnrgq1g99SRmZhGU', // 기존 Google Drive ID (백업용)
-    VIDEO_PROVIDER: 'youtube', // 'youtube' 또는 'google-drive'
+    // YouTube 영상 설정 (Privacy-Enhanced 모드 전용)
+    YOUTUBE_VIDEO_ID: 'HggDt3GUGYo', // YouTube 영상 ID
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
     LOADING_DELAY: 0, // 즉시 로딩
     VIDEO_SIMULATION_DURATION: 10,
@@ -207,6 +205,7 @@ const VideoManager = {
         progressInterval: null,
         pausedAt: 0
     },
+    youtubePlayer: null,
 
     setupVideoPlayer() {
         console.log('영상 플레이어 설정 시작');
@@ -230,20 +229,18 @@ const VideoManager = {
     },
 
     validateVideoId() {
-        const videoId = CONFIG.VIDEO_PROVIDER === 'youtube' ? CONFIG.YOUTUBE_VIDEO_ID : CONFIG.GOOGLE_DRIVE_VIDEO_ID;
+        const videoId = CONFIG.YOUTUBE_VIDEO_ID;
 
         if (!videoId || videoId.trim() === '') {
-            console.error('영상 ID가 설정되지 않았습니다.');
+            console.error('YouTube 영상 ID가 설정되지 않았습니다.');
             return false;
         }
 
         // YouTube ID 검증 (11자리 영숫자)
-        if (CONFIG.VIDEO_PROVIDER === 'youtube') {
-            const youtubeIdPattern = /^[a-zA-Z0-9_-]{11}$/;
-            if (!youtubeIdPattern.test(videoId)) {
-                console.error('유효하지 않은 YouTube 영상 ID:', videoId);
-                return false;
-            }
+        const youtubeIdPattern = /^[a-zA-Z0-9_-]{11}$/;
+        if (!youtubeIdPattern.test(videoId)) {
+            console.error('유효하지 않은 YouTube 영상 ID:', videoId);
+            return false;
         }
 
         return true;
@@ -252,33 +249,13 @@ const VideoManager = {
     showVideoIdError(container) {
         container.innerHTML = `
             <div class="video-fallback">
-                <h3>⚠️ 영상 설정 오류</h3>
-                <p>영상 ID가 올바르게 설정되지 않았습니다.</p>
-                <p><strong>현재 설정:</strong></p>
-                <ul style="text-align: left; margin: 10px 0;">
-                    <li>제공자: ${CONFIG.VIDEO_PROVIDER}</li>
-                    <li>YouTube ID: ${CONFIG.YOUTUBE_VIDEO_ID}</li>
-                    <li>Google Drive ID: ${CONFIG.GOOGLE_DRIVE_VIDEO_ID}</li>
-                </ul>
-                <p>script.js 파일의 CONFIG 객체에서 올바른 영상 ID를 설정해주세요.</p>
-                <button id="manual-complete-btn" class="btn btn-primary">
-                    수동으로 교육 완료 처리
-                </button>
+                <h3>⚠️ YouTube 영상 설정 오류</h3>
+                <p>YouTube 영상 ID가 올바르게 설정되지 않았습니다.</p>
+                <p><strong>현재 설정:</strong> ${CONFIG.YOUTUBE_VIDEO_ID}</p>
+                <p>script.js 파일의 CONFIG.YOUTUBE_VIDEO_ID에서 올바른 11자리 YouTube 영상 ID를 설정해주세요.</p>
+                <p><small>예시: 'dQw4w9WgXcQ' (11자리 영숫자)</small></p>
             </div>
         `;
-
-        // 수동 완료 버튼 이벤트 설정
-        const manualCompleteBtn = container.querySelector('#manual-complete-btn');
-        if (manualCompleteBtn) {
-            manualCompleteBtn.addEventListener('click', () => {
-                userSession.videoCompleted = true;
-                const completeBtn = document.getElementById('video-complete-btn');
-                if (completeBtn) {
-                    completeBtn.style.display = 'block';
-                    completeBtn.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        }
     },
 
     renderDevelopmentVideo(container) {
@@ -325,6 +302,9 @@ const VideoManager = {
                 </div>
             `;
 
+            // YouTube Player API 초기화
+            this.initializeYouTubePlayer();
+
             // 영상 로드 실패 감지 및 fallback 처리
             this.setupVideoFallback(container, videoConfig);
 
@@ -360,20 +340,7 @@ const VideoManager = {
                 }, 2000);
             });
 
-            // 3초 후에도 로드되지 않으면 fallback 옵션 제공
-            setTimeout(() => {
-                if (!this.videoState.isPlaying && !userSession.videoCompleted) {
-                    const existingFallbackBtn = container.querySelector('.video-fallback-btn');
-                    if (!existingFallbackBtn) {
-                        const fallbackBtn = document.createElement('button');
-                        fallbackBtn.textContent = '영상이 로드되지 않나요? 수동 완료하기';
-                        fallbackBtn.className = 'btn btn-secondary video-fallback-btn';
-                        fallbackBtn.onclick = () => this.showVideoFallback(container, videoConfig);
-
-                        container.appendChild(fallbackBtn);
-                    }
-                }
-            }, 3000);
+            // 영상 로드 모니터링 (수동 완료 버튼 제거됨)
         }
     },
 
@@ -409,74 +376,38 @@ const VideoManager = {
     },
 
     getVideoConfig() {
-        const configs = {
-            youtube: {
-                iframe: `
-                    <iframe 
-                        id="youtube-player"
-                        width="100%" 
-                        height="400" 
-                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen
-                        style="border-radius: 10px;"
-                        title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
-                    </iframe>
-                    <div class="privacy-notice">
-                        <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 영상 재생 전까지 쿠키가 설정되지 않습니다.</small>
-                    </div>
-                `,
-                duration: 300, // 5분 (초 단위)
-                fallbackMessage: `
-                    <div class="video-fallback">
-                        <h3>⚠️ YouTube 영상 로드 실패</h3>
-                        <p>YouTube Privacy-Enhanced 모드로 영상을 불러올 수 없습니다.</p>
-                        <p><strong>가능한 원인:</strong></p>
-                        <ul style="text-align: left; margin: 10px 0;">
-                            <li>영상 ID가 잘못되었거나 영상이 삭제됨</li>
-                            <li>영상이 비공개 또는 제한됨</li>
-                            <li>네트워크 연결 문제</li>
-                        </ul>
-                        <div style="margin: 15px 0;">
-                            <button id="try-google-drive-btn" class="btn btn-secondary" style="margin-right: 10px;">
-                                Google Drive 영상으로 시도
-                            </button>
-                            <button id="manual-complete-btn" class="btn btn-primary">
-                                수동으로 교육 완료 처리
-                            </button>
-                        </div>
-                    </div>
-                `
-            },
-            'google-drive': {
-                iframe: `
-                    <iframe 
-                        id="drive-player"
-                        src="https://drive.google.com/file/d/${CONFIG.GOOGLE_DRIVE_VIDEO_ID}/preview" 
-                        width="100%" 
-                        height="400" 
-                        frameborder="0"
-                        allow="autoplay; encrypted-media"
-                        allowfullscreen
-                        style="border-radius: 10px;"
-                        title="전기설비 안전교육 영상">
-                    </iframe>
-                `,
-                duration: 300, // 5분 (초 단위)
-                fallbackMessage: `
-                    <div class="video-fallback">
-                        <h3>⚠️ 영상 로드 실패</h3>
-                        <p>Google Drive 영상을 불러올 수 없습니다.</p>
-                        <button id="manual-complete-btn" class="btn btn-primary">
-                            수동으로 교육 완료 처리
-                        </button>
-                    </div>
-                `
-            }
+        return {
+            iframe: `
+                <iframe 
+                    id="youtube-player"
+                    width="100%" 
+                    height="400" 
+                    src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3&enablejsapi=1"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    style="border-radius: 10px;"
+                    title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
+                </iframe>
+                <div class="privacy-notice">
+                    <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 영상 재생 전까지 쿠키가 설정되지 않습니다.</small>
+                </div>
+            `,
+            duration: 300, // 5분 (초 단위)
+            fallbackMessage: `
+                <div class="video-fallback">
+                    <h3>⚠️ YouTube 영상 로드 실패</h3>
+                    <p>YouTube Privacy-Enhanced 모드로 영상을 불러올 수 없습니다.</p>
+                    <p><strong>가능한 원인:</strong></p>
+                    <ul style="text-align: left; margin: 10px 0;">
+                        <li>영상 ID가 잘못되었거나 영상이 삭제됨</li>
+                        <li>영상이 비공개 또는 제한됨</li>
+                        <li>네트워크 연결 문제</li>
+                    </ul>
+                    <p>페이지를 새로고침하거나 관리자에게 문의해주세요.</p>
+                </div>
+            `
         };
-
-        return configs[CONFIG.VIDEO_PROVIDER] || configs['youtube'];
     },
 
     startRealVideoTracking() {
@@ -512,6 +443,78 @@ const VideoManager = {
                 }
             }
         }, 1000);
+    },
+
+    initializeYouTubePlayer() {
+        // YouTube Player API가 로드되지 않은 경우 로드
+        if (typeof YT === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(script);
+
+            window.onYouTubeIframeAPIReady = () => {
+                this.createYouTubePlayer();
+            };
+        } else {
+            this.createYouTubePlayer();
+        }
+    },
+
+    createYouTubePlayer() {
+        // iframe이 로드된 후 Player API 연결 시도
+        setTimeout(() => {
+            try {
+                const iframe = document.getElementById('youtube-player');
+                if (iframe) {
+                    this.youtubePlayer = new YT.Player('youtube-player', {
+                        events: {
+                            'onReady': (event) => {
+                                console.log('YouTube Player 준비 완료');
+                                this.setupVideoControls();
+                            },
+                            'onStateChange': (event) => {
+                                this.handleYouTubeStateChange(event);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('YouTube Player API 초기화 실패, 기본 컨트롤 사용:', error);
+                this.setupVideoControls();
+            }
+        }, 1000);
+    },
+
+    handleYouTubeStateChange(event) {
+        // YouTube 플레이어 상태 변경 감지
+        if (event.data === YT.PlayerState.PLAYING) {
+            this.videoState.isPlaying = true;
+            this.videoState.isPaused = false;
+            this.updateControlButtons();
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            this.videoState.isPaused = true;
+            this.updateControlButtons();
+        } else if (event.data === YT.PlayerState.ENDED) {
+            userSession.videoCompleted = true;
+            const completeBtn = document.getElementById('video-complete-btn');
+            if (completeBtn) {
+                completeBtn.style.display = 'block';
+                completeBtn.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    },
+
+    updateControlButtons() {
+        const pauseBtn = document.getElementById('video-pause-btn');
+        const resumeBtn = document.getElementById('video-resume-btn');
+
+        if (this.videoState.isPaused) {
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (resumeBtn) resumeBtn.style.display = 'inline-block';
+        } else {
+            if (pauseBtn) pauseBtn.style.display = 'inline-block';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+        }
     },
 
     setupVideoControls() {
@@ -567,6 +570,23 @@ const VideoManager = {
 
     restartVideo() {
         console.log('영상 재시작');
+
+        // YouTube Player API 사용 가능한 경우
+        if (this.youtubePlayer && typeof this.youtubePlayer.seekTo === 'function') {
+            try {
+                this.youtubePlayer.seekTo(0);
+                this.youtubePlayer.playVideo();
+                console.log('YouTube Player API로 재시작');
+                userSession.videoCompleted = false;
+                const completeBtn = document.getElementById('video-complete-btn');
+                if (completeBtn) completeBtn.style.display = 'none';
+                return;
+            } catch (error) {
+                console.warn('YouTube Player API 재시작 실패:', error);
+            }
+        }
+
+        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
         if (this.videoState.progressInterval) {
             clearInterval(this.videoState.progressInterval);
         }
@@ -585,35 +605,52 @@ const VideoManager = {
         if (timeDisplay) timeDisplay.textContent = '00:00 / 10:00';
         if (completeBtn) completeBtn.style.display = 'none';
 
+        this.updateControlButtons();
         this.setupVideoPlayer();
     },
 
     pauseVideo() {
         console.log('영상 일시정지');
+
+        // YouTube Player API 사용 가능한 경우
+        if (this.youtubePlayer && typeof this.youtubePlayer.pauseVideo === 'function') {
+            try {
+                this.youtubePlayer.pauseVideo();
+                console.log('YouTube Player API로 일시정지');
+                return;
+            } catch (error) {
+                console.warn('YouTube Player API 일시정지 실패:', error);
+            }
+        }
+
+        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
         if (!this.videoState.isPlaying || this.videoState.isPaused) return;
 
         this.videoState.isPaused = true;
         this.videoState.pausedAt = this.videoState.currentProgress;
-
-        const pauseBtn = document.getElementById('video-pause-btn');
-        const resumeBtn = document.getElementById('video-resume-btn');
-
-        if (pauseBtn) pauseBtn.style.display = 'none';
-        if (resumeBtn) resumeBtn.style.display = 'inline-block';
+        this.updateControlButtons();
     },
 
     resumeVideo() {
         console.log('영상 재생 재개');
+
+        // YouTube Player API 사용 가능한 경우
+        if (this.youtubePlayer && typeof this.youtubePlayer.playVideo === 'function') {
+            try {
+                this.youtubePlayer.playVideo();
+                console.log('YouTube Player API로 재생 재개');
+                return;
+            } catch (error) {
+                console.warn('YouTube Player API 재생 실패:', error);
+            }
+        }
+
+        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
         if (!this.videoState.isPaused) return;
 
         this.videoState.isPaused = false;
         this.startVideoSimulation();
-
-        const pauseBtn = document.getElementById('video-pause-btn');
-        const resumeBtn = document.getElementById('video-resume-btn');
-
-        if (pauseBtn) pauseBtn.style.display = 'inline-block';
-        if (resumeBtn) resumeBtn.style.display = 'none';
+        this.updateControlButtons();
     }
 };
 
