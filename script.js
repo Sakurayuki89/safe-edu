@@ -6,7 +6,7 @@ console.log('Script 로드 시작:', new Date().toLocaleTimeString());
 const CONFIG = {
     API_BASE_URL: '/.netlify/functions',
     // YouTube 영상 설정 (Privacy-Enhanced 모드 사용)
-    YOUTUBE_VIDEO_ID: 'HggDt3GUGYo&t', // 실제 YouTube 영상 ID로 변경 필요
+    YOUTUBE_VIDEO_ID: 'HggDt3GUGYo', // YouTube 영상 ID (순수 ID만 사용)
     GOOGLE_DRIVE_VIDEO_ID: '1EMOjJ1Fju4JNvxUCbnrgq1g99SRmZhGU', // 기존 Google Drive ID (백업용)
     VIDEO_PROVIDER: 'youtube', // 'youtube' 또는 'google-drive'
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
@@ -113,30 +113,30 @@ const Utils = {
     async fetchWithTimeout(url, options = {}, timeout = 10000, retries = 2) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
-        
+
         const fetchOptions = {
             ...options,
             signal: controller.signal
         };
-        
+
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 const response = await fetch(url, fetchOptions);
                 clearTimeout(timeoutId);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                
+
                 return response;
             } catch (error) {
                 console.warn(`API 호출 시도 ${attempt + 1}/${retries + 1} 실패:`, error.message);
-                
+
                 if (attempt === retries) {
                     clearTimeout(timeoutId);
                     throw error;
                 }
-                
+
                 // 재시도 전 잠시 대기
                 await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
             }
@@ -154,7 +154,7 @@ const ScreenManager = {
 
     showScreen(screenId) {
         console.log('화면 전환:', screenId);
-        
+
         // 모든 화면 숨기기
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
@@ -183,7 +183,7 @@ const ScreenManager = {
         document.querySelectorAll('.progress-step').forEach((step, index) => {
             const stepNumber = index + 1;
             step.classList.remove('active', 'completed');
-            
+
             if (stepNumber < currentStep) {
                 step.classList.add('completed');
             } else if (stepNumber === currentStep) {
@@ -211,7 +211,13 @@ const VideoManager = {
     setupVideoPlayer() {
         console.log('영상 플레이어 설정 시작');
         const videoPlayer = document.getElementById('video-player');
-        
+
+        // 영상 ID 검증
+        if (!this.validateVideoId()) {
+            this.showVideoIdError(videoPlayer);
+            return;
+        }
+
         if (CONFIG.DEVELOPMENT_MODE) {
             // 개발 모드: 시뮬레이션
             this.renderDevelopmentVideo(videoPlayer);
@@ -221,6 +227,58 @@ const VideoManager = {
         }
 
         this.setupVideoControls();
+    },
+
+    validateVideoId() {
+        const videoId = CONFIG.VIDEO_PROVIDER === 'youtube' ? CONFIG.YOUTUBE_VIDEO_ID : CONFIG.GOOGLE_DRIVE_VIDEO_ID;
+
+        if (!videoId || videoId.trim() === '') {
+            console.error('영상 ID가 설정되지 않았습니다.');
+            return false;
+        }
+
+        // YouTube ID 검증 (11자리 영숫자)
+        if (CONFIG.VIDEO_PROVIDER === 'youtube') {
+            const youtubeIdPattern = /^[a-zA-Z0-9_-]{11}$/;
+            if (!youtubeIdPattern.test(videoId)) {
+                console.error('유효하지 않은 YouTube 영상 ID:', videoId);
+                return false;
+            }
+        }
+
+        return true;
+    },
+
+    showVideoIdError(container) {
+        container.innerHTML = `
+            <div class="video-fallback">
+                <h3>⚠️ 영상 설정 오류</h3>
+                <p>영상 ID가 올바르게 설정되지 않았습니다.</p>
+                <p><strong>현재 설정:</strong></p>
+                <ul style="text-align: left; margin: 10px 0;">
+                    <li>제공자: ${CONFIG.VIDEO_PROVIDER}</li>
+                    <li>YouTube ID: ${CONFIG.YOUTUBE_VIDEO_ID}</li>
+                    <li>Google Drive ID: ${CONFIG.GOOGLE_DRIVE_VIDEO_ID}</li>
+                </ul>
+                <p>script.js 파일의 CONFIG 객체에서 올바른 영상 ID를 설정해주세요.</p>
+                <button id="manual-complete-btn" class="btn btn-primary">
+                    수동으로 교육 완료 처리
+                </button>
+            </div>
+        `;
+
+        // 수동 완료 버튼 이벤트 설정
+        const manualCompleteBtn = container.querySelector('#manual-complete-btn');
+        if (manualCompleteBtn) {
+            manualCompleteBtn.addEventListener('click', () => {
+                userSession.videoCompleted = true;
+                const completeBtn = document.getElementById('video-complete-btn');
+                if (completeBtn) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
     },
 
     renderDevelopmentVideo(container) {
@@ -248,47 +306,93 @@ const VideoManager = {
     },
 
     loadProductionVideo(container) {
-        const videoConfig = this.getVideoConfig();
-        
+        // 로딩 상태 표시
         container.innerHTML = `
-            <div class="video-wrapper">
-                ${videoConfig.iframe}
+            <div class="video-loading">
+                <div class="loading-spinner"></div>
+                <p>영상을 불러오는 중입니다...</p>
+                <small>Privacy-Enhanced 모드로 로딩 중</small>
             </div>
         `;
 
-        // 영상 로드 실패 감지 및 fallback 처리
-        this.setupVideoFallback(container, videoConfig);
+        const videoConfig = this.getVideoConfig();
 
-        // 실제 영상 추적 시작
-        this.startRealVideoTracking(videoConfig.duration);
+        // 잠시 후 실제 영상 로드
+        setTimeout(() => {
+            container.innerHTML = `
+                <div class="video-wrapper">
+                    ${videoConfig.iframe}
+                </div>
+            `;
+
+            // 영상 로드 실패 감지 및 fallback 처리
+            this.setupVideoFallback(container, videoConfig);
+
+            // 실제 영상 추적 시작
+            this.startRealVideoTracking(videoConfig.duration);
+        }, 500);
     },
 
     setupVideoFallback(container, videoConfig) {
         // iframe 로드 실패 감지
         const iframe = container.querySelector('iframe');
         if (iframe) {
+            // iframe 로드 오류 감지
             iframe.addEventListener('error', () => {
                 console.warn('영상 로드 실패, fallback 모드로 전환');
                 this.showVideoFallback(container, videoConfig);
             });
 
-            // 5초 후에도 로드되지 않으면 fallback 옵션 제공
+            // iframe 로드 완료 후에도 오류가 있는지 확인
+            iframe.addEventListener('load', () => {
+                setTimeout(() => {
+                    try {
+                        // iframe 내부에서 오류가 발생했는지 확인
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc && iframeDoc.body && iframeDoc.body.innerHTML.includes('오류')) {
+                            console.warn('YouTube 영상 오류 감지, fallback 모드로 전환');
+                            this.showVideoFallback(container, videoConfig);
+                        }
+                    } catch (e) {
+                        // Cross-origin 제한으로 인한 오류는 무시 (정상적인 경우)
+                        console.log('Cross-origin 제한으로 iframe 내용 확인 불가 (정상)');
+                    }
+                }, 2000);
+            });
+
+            // 3초 후에도 로드되지 않으면 fallback 옵션 제공
             setTimeout(() => {
                 if (!this.videoState.isPlaying && !userSession.videoCompleted) {
-                    const fallbackBtn = document.createElement('button');
-                    fallbackBtn.textContent = '영상이 로드되지 않나요? 수동 완료하기';
-                    fallbackBtn.className = 'btn btn-secondary video-fallback-btn';
-                    fallbackBtn.onclick = () => this.showVideoFallback(container, videoConfig);
-                    
-                    container.appendChild(fallbackBtn);
+                    const existingFallbackBtn = container.querySelector('.video-fallback-btn');
+                    if (!existingFallbackBtn) {
+                        const fallbackBtn = document.createElement('button');
+                        fallbackBtn.textContent = '영상이 로드되지 않나요? 수동 완료하기';
+                        fallbackBtn.className = 'btn btn-secondary video-fallback-btn';
+                        fallbackBtn.onclick = () => this.showVideoFallback(container, videoConfig);
+
+                        container.appendChild(fallbackBtn);
+                    }
                 }
-            }, 5000);
+            }, 3000);
         }
     },
 
     showVideoFallback(container, videoConfig) {
         container.innerHTML = videoConfig.fallbackMessage;
-        
+
+        // Google Drive 백업 시도 버튼 이벤트 설정
+        const tryGoogleDriveBtn = container.querySelector('#try-google-drive-btn');
+        if (tryGoogleDriveBtn && CONFIG.VIDEO_PROVIDER === 'youtube') {
+            tryGoogleDriveBtn.addEventListener('click', () => {
+                console.log('Google Drive 영상으로 전환 시도');
+                CONFIG.VIDEO_PROVIDER = 'google-drive';
+                this.loadProductionVideo(container);
+            });
+        } else if (tryGoogleDriveBtn) {
+            // 이미 Google Drive 모드인 경우 버튼 숨기기
+            tryGoogleDriveBtn.style.display = 'none';
+        }
+
         // 수동 완료 버튼 이벤트 설정
         const manualCompleteBtn = container.querySelector('#manual-complete-btn');
         if (manualCompleteBtn) {
@@ -299,6 +403,7 @@ const VideoManager = {
                     completeBtn.style.display = 'block';
                     completeBtn.scrollIntoView({ behavior: 'smooth' });
                 }
+                console.log('수동으로 영상 교육 완료 처리됨');
             });
         }
     },
@@ -311,7 +416,7 @@ const VideoManager = {
                         id="youtube-player"
                         width="100%" 
                         height="400" 
-                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&showinfo=0&controls=1&disablekb=1&fs=1&iv_load_policy=3&enablejsapi=1&origin=${window.location.origin}"
+                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3"
                         frameborder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen
@@ -325,12 +430,22 @@ const VideoManager = {
                 duration: 300, // 5분 (초 단위)
                 fallbackMessage: `
                     <div class="video-fallback">
-                        <h3>⚠️ 영상 로드 실패</h3>
+                        <h3>⚠️ YouTube 영상 로드 실패</h3>
                         <p>YouTube Privacy-Enhanced 모드로 영상을 불러올 수 없습니다.</p>
-                        <p>네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.</p>
-                        <button id="manual-complete-btn" class="btn btn-primary">
-                            수동으로 교육 완료 처리
-                        </button>
+                        <p><strong>가능한 원인:</strong></p>
+                        <ul style="text-align: left; margin: 10px 0;">
+                            <li>영상 ID가 잘못되었거나 영상이 삭제됨</li>
+                            <li>영상이 비공개 또는 제한됨</li>
+                            <li>네트워크 연결 문제</li>
+                        </ul>
+                        <div style="margin: 15px 0;">
+                            <button id="try-google-drive-btn" class="btn btn-secondary" style="margin-right: 10px;">
+                                Google Drive 영상으로 시도
+                            </button>
+                            <button id="manual-complete-btn" class="btn btn-primary">
+                                수동으로 교육 완료 처리
+                            </button>
+                        </div>
                     </div>
                 `
             },
@@ -384,7 +499,7 @@ const VideoManager = {
             const totalMinutes = Math.floor(videoDurationSeconds / 60);
 
             if (timeDisplay) {
-                timeDisplay.textContent = 
+                timeDisplay.textContent =
                     `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
             }
 
@@ -455,7 +570,7 @@ const VideoManager = {
         if (this.videoState.progressInterval) {
             clearInterval(this.videoState.progressInterval);
         }
-        
+
         this.videoState.currentProgress = 0;
         this.videoState.pausedAt = 0;
         this.videoState.isPlaying = false;
@@ -482,7 +597,7 @@ const VideoManager = {
 
         const pauseBtn = document.getElementById('video-pause-btn');
         const resumeBtn = document.getElementById('video-resume-btn');
-        
+
         if (pauseBtn) pauseBtn.style.display = 'none';
         if (resumeBtn) resumeBtn.style.display = 'inline-block';
     },
@@ -496,7 +611,7 @@ const VideoManager = {
 
         const pauseBtn = document.getElementById('video-pause-btn');
         const resumeBtn = document.getElementById('video-resume-btn');
-        
+
         if (pauseBtn) pauseBtn.style.display = 'inline-block';
         if (resumeBtn) resumeBtn.style.display = 'none';
     }
@@ -510,17 +625,17 @@ console.log('영상 관리자 로드 완료:', new Date().toLocaleTimeString());
 const App = {
     init() {
         console.log('앱 초기화 시작:', new Date().toLocaleTimeString());
-        
+
         try {
             // 로딩 화면 즉시 숨기기
             this.hideLoading();
-            
+
             // 이벤트 리스너 설정
             this.setupEventListeners();
-            
+
             // 첫 화면 표시
             ScreenManager.showScreen('user-info');
-            
+
             console.log('앱 초기화 완료:', new Date().toLocaleTimeString());
         } catch (error) {
             console.error('앱 초기화 중 오류 발생:', error);
@@ -534,17 +649,17 @@ const App = {
         // 여러 가능한 ID들을 시도
         const possibleIds = ['loading', 'loader', 'loading-screen', 'preloader'];
         let loadingElement = null;
-        
+
         for (const id of possibleIds) {
             loadingElement = document.getElementById(id);
             if (loadingElement) break;
         }
-        
+
         // 또는 클래스명으로도 시도
         if (!loadingElement) {
             loadingElement = document.querySelector('.loading, .loader, .loading-screen');
         }
-        
+
         if (loadingElement) {
             loadingElement.style.display = 'none';
             document.body.classList.add('loaded');
@@ -557,13 +672,13 @@ const App = {
 
     setupEventListeners() {
         console.log('이벤트 리스너 설정 시작');
-        
+
         // 1단계: 사용자 정보 입력
         const userInfoForm = document.getElementById('user-info-form');
         if (userInfoForm) {
             userInfoForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
+
                 const name = document.getElementById('user-name').value.trim();
                 const zodiac = document.getElementById('user-zodiac').value;
 
@@ -586,7 +701,7 @@ const App = {
                 if (isValid) {
                     userSession.name = name;
                     userSession.zodiac = zodiac;
-                    
+
                     // 교육 시작 API 호출
                     try {
                         const startResponse = await Utils.fetchWithTimeout('/.netlify/functions/start-education', {
@@ -599,9 +714,9 @@ const App = {
                                 zodiac: userSession.zodiac
                             })
                         });
-                        
+
                         const startResult = await startResponse.json();
-                        
+
                         if (startResult.success && startResult.data?.rowNumber) {
                             userSession.rowNumber = startResult.data.rowNumber;
                             console.log('교육 시작됨, 행 번호:', userSession.rowNumber);
@@ -612,7 +727,7 @@ const App = {
                         console.error('교육 시작 API 호출 실패:', error);
                         // 오류가 발생해도 계속 진행
                     }
-                    
+
                     await this.setupFortuneScreen();
                     ScreenManager.showScreen('fortune');
                 }
@@ -639,7 +754,7 @@ const App = {
                         // Quiz Score 카운터 증가 (시청 완료 버튼 클릭 횟수)
                         userSession.quizScore++;
                         console.log('시청 완료 버튼 클릭 횟수:', userSession.quizScore);
-                        
+
                         await this.setupAssessmentScreen();
                         ScreenManager.showScreen('assessment');
                     }
@@ -663,18 +778,18 @@ const App = {
 
     async setupFortuneScreen() {
         console.log('운세 화면 설정');
-        
+
         // 띠 표시
         const zodiacDisplay = document.getElementById('user-zodiac-display');
         if (zodiacDisplay) {
             zodiacDisplay.textContent = userSession.zodiac;
         }
-        
+
         // AI 운세 생성 API 호출
         const fortuneText = document.getElementById('fortune-text');
         if (fortuneText) {
             fortuneText.textContent = '맞춤형 운세를 생성하고 있습니다...';
-            
+
             try {
                 const response = await Utils.fetchWithTimeout('/.netlify/functions/generate-fortune', {
                     method: 'POST',
@@ -686,9 +801,9 @@ const App = {
                         zodiac: userSession.zodiac
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success && result.fortune) {
                     fortuneText.textContent = result.fortune;
                 } else {
@@ -703,12 +818,12 @@ const App = {
                 fortuneText.textContent = defaultFortune;
             }
         }
-        
+
         // 로또 번호 생성
         const lotteryNumbers = Utils.generateLotteryNumbers();
         const lotteryContainer = document.getElementById('lottery-numbers');
         if (lotteryContainer) {
-            lotteryContainer.innerHTML = lotteryNumbers.map(num => 
+            lotteryContainer.innerHTML = lotteryNumbers.map(num =>
                 `<div class="lottery-number">${num}</div>`
             ).join('');
         }
@@ -716,7 +831,7 @@ const App = {
 
     async setupAssessmentScreen() {
         console.log('평가 화면 설정');
-        
+
         try {
             // 백엔드에서 퀴즈 데이터 가져오기
             const response = await Utils.fetchWithTimeout('/.netlify/functions/get-quiz', {
@@ -725,9 +840,9 @@ const App = {
                     'Content-Type': 'application/json',
                 }
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success && result.data) {
                 userSession.quizData = result.data;
             } else {
@@ -810,10 +925,10 @@ const App = {
         const totalQuestions = userSession.quizData.length;
         const answeredQuestions = document.querySelectorAll('input[type="radio"]:checked').length;
         const submitBtn = document.querySelector('#assessment-form button[type="submit"]');
-        
+
         if (submitBtn) {
             submitBtn.disabled = answeredQuestions !== totalQuestions;
-            
+
             // 버튼 텍스트 업데이트
             if (answeredQuestions === totalQuestions) {
                 submitBtn.innerHTML = `
@@ -836,11 +951,11 @@ const App = {
         const answeredQuestions = document.querySelectorAll('input[type="radio"]:checked').length;
         const progressText = document.getElementById('quiz-progress');
         const progressBar = document.getElementById('quiz-progress-bar');
-        
+
         if (progressText) {
             progressText.textContent = `${answeredQuestions}/${totalQuestions}`;
         }
-        
+
         if (progressBar) {
             const percentage = (answeredQuestions / totalQuestions) * 100;
             progressBar.style.width = `${percentage}%`;
@@ -849,7 +964,7 @@ const App = {
 
     handleQuizSubmit() {
         console.log('퀴즈 제출 처리');
-        
+
         // 답변 수집
         userSession.quizAnswers = [];
         userSession.quizData.forEach(question => {
@@ -869,15 +984,15 @@ const App = {
 
     setupCompletionScreen() {
         console.log('완료 화면 설정');
-        
+
         // 답변 요약 표시
         userSession.quizData.forEach((question, index) => {
             const answerNumber = userSession.quizAnswers[index];
             const answerText = question.options[answerNumber - 1];
-            
+
             const numberElement = document.getElementById(`answer${index + 1}-number`);
             const textElement = document.getElementById(`answer${index + 1}-text`);
-            
+
             if (numberElement) numberElement.textContent = `${answerNumber}.`;
             if (textElement) textElement.textContent = answerText;
         });
@@ -886,7 +1001,7 @@ const App = {
         const fortuneHashtags = FORTUNE_HASHTAGS[userSession.zodiac] || ['#행운', '#안전', '#성공'];
         const fortuneHashtagsContainer = document.getElementById('review-fortune-hashtags');
         if (fortuneHashtagsContainer) {
-            fortuneHashtagsContainer.innerHTML = fortuneHashtags.map(tag => 
+            fortuneHashtagsContainer.innerHTML = fortuneHashtags.map(tag =>
                 `<span class="hashtag">${tag}</span>`
             ).join(' ');
         }
@@ -894,7 +1009,7 @@ const App = {
         const safetyHashtags = SAFETY_HASHTAGS.slice(0, 4);
         const safetyHashtagsContainer = document.getElementById('review-safety-hashtags');
         if (safetyHashtagsContainer) {
-            safetyHashtagsContainer.innerHTML = safetyHashtags.map(tag => 
+            safetyHashtagsContainer.innerHTML = safetyHashtags.map(tag =>
                 `<span class="hashtag">${tag}</span>`
             ).join(' ');
         }
@@ -912,7 +1027,7 @@ const App = {
 
     showLuckyButton() {
         console.log('행운 버튼 표시');
-        
+
         // 완료 요약 섹션 숨기기
         const summarySection = document.querySelector('.completion-summary-section');
         if (summarySection) {
@@ -940,7 +1055,7 @@ const App = {
 
     async handleLuckyButton() {
         console.log('행운 버튼 처리');
-        
+
         try {
             // 당첨자 수 확인 API 호출
             const checkResponse = await Utils.fetchWithTimeout('/.netlify/functions/check-winners', {
@@ -949,9 +1064,9 @@ const App = {
                     'Content-Type': 'application/json',
                 }
             });
-            
+
             const checkResult = await checkResponse.json();
-            
+
             if (!checkResult.success || !checkResult.data?.canWin) {
                 // 당첨자 한도 초과
                 userSession.isWinner = false;
@@ -962,7 +1077,7 @@ const App = {
                 });
                 return;
             }
-            
+
             // 당첨 여부 결정
             const isWinner = Math.random() < CONFIG.WIN_PROBABILITY;
             userSession.isWinner = isWinner;
@@ -970,20 +1085,20 @@ const App = {
             // 결과 표시
             const title = isWinner ? '🎉 축하합니다!' : '😢 아쉽네요';
             const message = isWinner ? '당첨되었습니다!' : '아쉽지만 꽝입니다!';
-            
+
             this.showModal(title, message, () => {
                 this.showEmployeeIdInput();
             });
-            
+
         } catch (error) {
             console.error('당첨자 확인 API 호출 실패:', error);
             // 오류 시 기본 로직으로 진행
             const isWinner = Math.random() < CONFIG.WIN_PROBABILITY;
             userSession.isWinner = isWinner;
-            
+
             const title = isWinner ? '🎉 축하합니다!' : '😢 아쉽네요';
             const message = isWinner ? '당첨되었습니다!' : '아쉽지만 꽝입니다!';
-            
+
             this.showModal(title, message, () => {
                 this.showEmployeeIdInput();
             });
@@ -992,7 +1107,7 @@ const App = {
 
     showEmployeeIdInput() {
         console.log('사번 입력 화면 표시');
-        
+
         // 기존 섹션들 숨기기
         document.querySelectorAll('.completion-summary-section, .lucky-section').forEach(section => {
             section.style.display = 'none';
@@ -1002,16 +1117,16 @@ const App = {
         const employeeIdSection = document.getElementById('employee-id-section');
         if (employeeIdSection) {
             employeeIdSection.style.display = 'block';
-            
+
             // 사번 입력 시 버튼 활성화
             const employeeIdInput = document.getElementById('employee-id');
             const finalBtn = document.getElementById('final-complete-btn');
-            
+
             if (employeeIdInput && finalBtn) {
                 employeeIdInput.addEventListener('input', (e) => {
                     finalBtn.disabled = !Utils.validateEmployeeId(e.target.value);
                 });
-                
+
                 finalBtn.addEventListener('click', () => {
                     this.handleFinalSubmit();
                 });
@@ -1021,16 +1136,16 @@ const App = {
 
     async handleFinalSubmit() {
         console.log('최종 제출 처리');
-        
+
         const employeeId = document.getElementById('employee-id').value;
-        
+
         if (!Utils.validateEmployeeId(employeeId)) {
             Utils.showError('employee-id-error', '7자리 숫자를 입력해주세요.');
             return;
         }
 
         userSession.employeeId = employeeId;
-        
+
         // 버튼 로딩 상태로 변경
         const finalBtn = document.getElementById('final-complete-btn');
         if (finalBtn) {
@@ -1038,13 +1153,13 @@ const App = {
             finalBtn.textContent = '제출 중...';
             finalBtn.classList.add('loading');
         }
-        
+
         try {
             // rowNumber 확인
             if (!userSession.rowNumber) {
                 throw new Error('교육 시작 정보가 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
             }
-            
+
             // Google Sheets에 전송할 데이터 준비
             const submissionData = {
                 name: userSession.name,
@@ -1054,9 +1169,9 @@ const App = {
                 rowNumber: userSession.rowNumber,
                 isWinner: userSession.isWinner
             };
-            
+
             console.log('제출 데이터:', submissionData);
-            
+
             // 백엔드로 데이터 전송
             const response = await Utils.fetchWithTimeout('/.netlify/functions/complete-education', {
                 method: 'POST',
@@ -1065,9 +1180,9 @@ const App = {
                 },
                 body: JSON.stringify(submissionData)
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 // 성공 처리
                 this.showModal('완료!', `교육이 성공적으로 완료되었습니다!\n\n시청 완료 횟수: ${userSession.quizScore}회\n사번: ${userSession.employeeId}\n\n데이터가 성공적으로 저장되었습니다.`, () => {
@@ -1088,10 +1203,10 @@ const App = {
                     }
                 });
             }
-            
+
         } catch (error) {
             console.error('최종 제출 API 호출 실패:', error);
-            
+
             // 오류 처리
             this.showModal('네트워크 오류', `서버와의 통신 중 오류가 발생했습니다.\n\n네트워크 연결을 확인하고 다시 시도해주세요.`, () => {
                 if (finalBtn) {
