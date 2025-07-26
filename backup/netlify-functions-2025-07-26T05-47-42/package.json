@@ -12,10 +12,7 @@
     "start": "netlify dev",
     "serve": "netlify dev",
     "local": "python3 serve.py",
-    "test": "python3 serve.py",
-    "backup": "node backup-system.js",
-    "backup:create": "node backup-system.js",
-    "backup:restore": "echo 'Please run the restore.sh script from the specific backup directory'"
+    "test": "python3 serve.py"
   },
   "dependencies": {
     "googleapis": "^128.0.0"

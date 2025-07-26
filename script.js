@@ -5,7 +5,10 @@ console.log('Script 로드 시작:', new Date().toLocaleTimeString());
 
 const CONFIG = {
     API_BASE_URL: '/.netlify/functions',
-    VIDEO_URL: '1EMOjJ1Fju4JNvxUCbnrgq1g99SRmZhGU',
+    // YouTube 영상 설정 (Privacy-Enhanced 모드 사용)
+    YOUTUBE_VIDEO_ID: 'HggDt3GUGYo&t', // 실제 YouTube 영상 ID로 변경 필요
+    GOOGLE_DRIVE_VIDEO_ID: '1EMOjJ1Fju4JNvxUCbnrgq1g99SRmZhGU', // 기존 Google Drive ID (백업용)
+    VIDEO_PROVIDER: 'youtube', // 'youtube' 또는 'google-drive'
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
     LOADING_DELAY: 0, // 즉시 로딩
     VIDEO_SIMULATION_DURATION: 10,
@@ -211,49 +214,154 @@ const VideoManager = {
         
         if (CONFIG.DEVELOPMENT_MODE) {
             // 개발 모드: 시뮬레이션
-            videoPlayer.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
-                    <p style="font-size: 18px; margin-bottom: 10px;">🎬 전기설비 안전교육 영상</p>
-                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
-                        개발 모드: ${CONFIG.VIDEO_SIMULATION_DURATION}초 시뮬레이션으로 진행됩니다
-                    </p>
-                    <button id="simulate-video" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
-                        📺 영상 시청 시작
-                    </button>
-                </div>
-            `;
-
-            // 시뮬레이션 버튼 이벤트
-            setTimeout(() => {
-                const simulateBtn = document.getElementById('simulate-video');
-                if (simulateBtn) {
-                    simulateBtn.addEventListener('click', () => {
-                        this.startVideoSimulation();
-                    });
-                }
-            }, 100);
+            this.renderDevelopmentVideo(videoPlayer);
         } else {
-            // 프로덕션 모드: 실제 Google Drive 영상
-            videoPlayer.innerHTML = `
-                <div style="position: relative; width: 100%; height: 400px;">
-                    <iframe 
-                        id="safety-video"
-                        src="https://drive.google.com/file/d/${CONFIG.VIDEO_URL}/preview" 
-                        width="100%" 
-                        height="100%" 
-                        frameborder="0"
-                        allow="autoplay; encrypted-media"
-                        allowfullscreen
-                        style="border-radius: 10px;">
-                    </iframe>
-                </div>
-            `;
-
-            // 실제 영상 추적 (5분 기준)
-            this.startRealVideoTracking();
+            // 프로덕션 모드: 실제 영상
+            this.loadProductionVideo(videoPlayer);
         }
 
         this.setupVideoControls();
+    },
+
+    renderDevelopmentVideo(container) {
+        container.innerHTML = `
+            <div class="dev-video-container">
+                <p class="dev-video-title">🎬 전기설비 안전교육 영상</p>
+                <p class="dev-video-desc">
+                    개발 모드: ${CONFIG.VIDEO_SIMULATION_DURATION}초 시뮬레이션으로 진행됩니다
+                </p>
+                <button id="simulate-video" class="dev-video-btn">
+                    📺 영상 시청 시작
+                </button>
+            </div>
+        `;
+
+        // 시뮬레이션 버튼 이벤트
+        setTimeout(() => {
+            const simulateBtn = document.getElementById('simulate-video');
+            if (simulateBtn) {
+                simulateBtn.addEventListener('click', () => {
+                    this.startVideoSimulation();
+                });
+            }
+        }, 100);
+    },
+
+    loadProductionVideo(container) {
+        const videoConfig = this.getVideoConfig();
+        
+        container.innerHTML = `
+            <div class="video-wrapper">
+                ${videoConfig.iframe}
+            </div>
+        `;
+
+        // 영상 로드 실패 감지 및 fallback 처리
+        this.setupVideoFallback(container, videoConfig);
+
+        // 실제 영상 추적 시작
+        this.startRealVideoTracking(videoConfig.duration);
+    },
+
+    setupVideoFallback(container, videoConfig) {
+        // iframe 로드 실패 감지
+        const iframe = container.querySelector('iframe');
+        if (iframe) {
+            iframe.addEventListener('error', () => {
+                console.warn('영상 로드 실패, fallback 모드로 전환');
+                this.showVideoFallback(container, videoConfig);
+            });
+
+            // 5초 후에도 로드되지 않으면 fallback 옵션 제공
+            setTimeout(() => {
+                if (!this.videoState.isPlaying && !userSession.videoCompleted) {
+                    const fallbackBtn = document.createElement('button');
+                    fallbackBtn.textContent = '영상이 로드되지 않나요? 수동 완료하기';
+                    fallbackBtn.className = 'btn btn-secondary video-fallback-btn';
+                    fallbackBtn.onclick = () => this.showVideoFallback(container, videoConfig);
+                    
+                    container.appendChild(fallbackBtn);
+                }
+            }, 5000);
+        }
+    },
+
+    showVideoFallback(container, videoConfig) {
+        container.innerHTML = videoConfig.fallbackMessage;
+        
+        // 수동 완료 버튼 이벤트 설정
+        const manualCompleteBtn = container.querySelector('#manual-complete-btn');
+        if (manualCompleteBtn) {
+            manualCompleteBtn.addEventListener('click', () => {
+                userSession.videoCompleted = true;
+                const completeBtn = document.getElementById('video-complete-btn');
+                if (completeBtn) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+    },
+
+    getVideoConfig() {
+        const configs = {
+            youtube: {
+                iframe: `
+                    <iframe 
+                        id="youtube-player"
+                        width="100%" 
+                        height="400" 
+                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&showinfo=0&controls=1&disablekb=1&fs=1&iv_load_policy=3&enablejsapi=1&origin=${window.location.origin}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        style="border-radius: 10px;"
+                        title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
+                    </iframe>
+                    <div class="privacy-notice">
+                        <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 영상 재생 전까지 쿠키가 설정되지 않습니다.</small>
+                    </div>
+                `,
+                duration: 300, // 5분 (초 단위)
+                fallbackMessage: `
+                    <div class="video-fallback">
+                        <h3>⚠️ 영상 로드 실패</h3>
+                        <p>YouTube Privacy-Enhanced 모드로 영상을 불러올 수 없습니다.</p>
+                        <p>네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.</p>
+                        <button id="manual-complete-btn" class="btn btn-primary">
+                            수동으로 교육 완료 처리
+                        </button>
+                    </div>
+                `
+            },
+            'google-drive': {
+                iframe: `
+                    <iframe 
+                        id="drive-player"
+                        src="https://drive.google.com/file/d/${CONFIG.GOOGLE_DRIVE_VIDEO_ID}/preview" 
+                        width="100%" 
+                        height="400" 
+                        frameborder="0"
+                        allow="autoplay; encrypted-media"
+                        allowfullscreen
+                        style="border-radius: 10px;"
+                        title="전기설비 안전교육 영상">
+                    </iframe>
+                `,
+                duration: 300, // 5분 (초 단위)
+                fallbackMessage: `
+                    <div class="video-fallback">
+                        <h3>⚠️ 영상 로드 실패</h3>
+                        <p>Google Drive 영상을 불러올 수 없습니다.</p>
+                        <button id="manual-complete-btn" class="btn btn-primary">
+                            수동으로 교육 완료 처리
+                        </button>
+                    </div>
+                `
+            }
+        };
+
+        return configs[CONFIG.VIDEO_PROVIDER] || configs['youtube'];
     },
 
     startRealVideoTracking() {

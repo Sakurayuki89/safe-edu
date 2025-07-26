@@ -5,11 +5,12 @@
 ## ✨ 주요 기능
 
 - 🎯 **개인화된 교육 경험**: 사용자 정보 기반 맞춤형 운세 및 콘텐츠
-- 🎬 **영상 기반 안전교육**: Google Drive 연동 교육 영상 시청
+- 🎬 **YouTube Privacy-Enhanced 영상**: 개인정보 보호 강화된 영상 플레이어
 - 📝 **실시간 퀴즈 평가**: Google Sheets 기반 동적 퀴즈 시스템
 - 🍀 **행운 이벤트**: 교육 완료 후 당첨 이벤트 (100명 한정)
 - 📊 **자동 데이터 관리**: Google Sheets 자동 저장 및 관리
 - 🤖 **AI 운세 생성**: Claude API 기반 맞춤형 운세 제공
+- 🔄 **자동 백업 시스템**: 인프라 변경 시 기존 설정 보존
 
 ## 🛠️ 기술 스택
 
@@ -38,6 +39,9 @@ safe-edu/
 │       ├── check-winners.js
 │       ├── complete-education.js
 │       └── generate-fortune.js
+├── backup/                 # 자동 백업 디렉토리
+│   └── netlify-functions-TIMESTAMP/
+├── backup-system.js        # 백업 시스템 스크립트
 ├── index.html              # 메인 HTML
 ├── script.js              # 프론트엔드 로직
 ├── styles.css             # 스타일시트
@@ -72,6 +76,29 @@ npm run dev
 netlify dev
 ```
 
+## 🔄 백업 및 복원
+
+### 백업 생성
+```bash
+npm run backup
+# 또는
+node backup-system.js
+```
+
+### 백업에서 복원
+```bash
+# 특정 백업 디렉토리로 이동
+cd backup/netlify-functions-TIMESTAMP/
+# 복원 스크립트 실행
+./restore.sh
+```
+
+### 백업 내용
+- Netlify Functions (모든 .js 파일)
+- 환경 변수 설정 (암호화된 형태)
+- 설정 파일 (package.json, netlify.toml, .gitignore)
+- 복원 스크립트 및 검증 리포트
+
 ## 📊 Google Sheets 구조
 
 ### 1번째 탭: "교육참가자"
@@ -103,9 +130,17 @@ CLAUDE_API_KEY=your_claude_api_key
 
 1. **개인정보 입력** → 이름, 띠 선택
 2. **맞춤형 운세** → AI 기반 개인화 운세 + 로또번호
-3. **안전교육 영상** → Google Drive 영상 시청 (빨리감기 제한)
+3. **안전교육 영상** → YouTube Privacy-Enhanced 모드로 영상 시청 (빨리감기 제한)
 4. **교육 평가** → 동적 퀴즈 문제 풀이
 5. **행운 이벤트** → 당첨 확률 10%, 최대 100명
+
+## 🔒 개인정보 보호 기능
+
+### YouTube Privacy-Enhanced 모드
+- `youtube-nocookie.com` 도메인 사용
+- 영상 재생 전까지 쿠키 설정 안함
+- 추적 및 데이터 수집 최소화
+- 영상 로드 실패 시 수동 완료 옵션 제공
 
 ## 📱 반응형 지원
 

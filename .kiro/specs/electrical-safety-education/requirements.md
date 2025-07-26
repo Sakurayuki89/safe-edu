@@ -104,3 +104,29 @@ The electrical safety education web application ("Kiro Spec") is a comprehensive
 3. WHEN user interactions occur THEN the system SHALL provide immediate visual feedback
 4. WHEN errors occur THEN the system SHALL display user-friendly error messages in Korean
 5. WHEN the application is accessed on different devices THEN the system SHALL maintain responsive design compatibility
+
+### Requirement 9
+
+**User Story:** As a trainee, I want to watch the safety education video through a privacy-enhanced YouTube player so that my viewing experience is secure and focused on the educational content.
+
+#### Acceptance Criteria
+
+1. WHEN the video screen loads THEN the system SHALL embed the YouTube video using Privacy-Enhanced mode (youtube-nocookie.com domain)
+2. WHEN the video is displayed THEN the system SHALL use YouTube's privacy-enhanced embed that reduces tracking and data collection
+3. WHEN the video plays THEN the system SHALL maintain all existing playback controls and completion detection functionality
+4. WHEN the video completes THEN the system SHALL enable the "시청 완료" button as before
+5. IF the YouTube embed fails to load THEN the system SHALL display a fallback message with manual completion option
+6. WHEN using Privacy-Enhanced mode THEN the system SHALL ensure no cookies are set until the user actually plays the video
+
+### Requirement 10
+
+**User Story:** As a system administrator, I want to preserve existing configurations and files when changing backend infrastructure so that no data or settings are lost during system updates.
+
+#### Acceptance Criteria
+
+1. WHEN backend infrastructure changes are planned THEN the system SHALL create timestamped backup copies of all existing configuration files
+2. WHEN switching from one backend system to another THEN the system SHALL preserve all environment variables and API configurations
+3. WHEN creating backups THEN the system SHALL include all serverless functions, configuration files, and deployment settings
+4. WHEN backups are created THEN the system SHALL store them in a dedicated backup directory with clear naming conventions
+5. WHEN restoration is needed THEN the system SHALL provide clear documentation on how to restore from backups
+6. IF backup creation fails THEN the system SHALL prevent the infrastructure change and alert the administrator

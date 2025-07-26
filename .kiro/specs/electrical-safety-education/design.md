@@ -43,9 +43,10 @@ User Input → Frontend Validation → API Endpoint → Google Sheets → Respon
 - **Logic**: Zodiac-based fortune selection, random lottery number generation (1-45)
 
 #### 4. Video Education Screen
-- **Elements**: Embedded Google Drive video, completion button (initially hidden)
+- **Elements**: Embedded YouTube Privacy-Enhanced video, completion button (initially hidden)
 - **Video Controls**: Disabled seeking, progress tracking, completion detection
-- **Integration**: Google Drive embed with restricted controls
+- **Integration**: YouTube Privacy-Enhanced embed (youtube-nocookie.com) with restricted controls
+- **Privacy Features**: No cookies until user interaction, reduced tracking, enhanced privacy protection
 
 #### 5. Assessment Screen
 - **Elements**: 2 multiple-choice questions with 4 options each
@@ -213,14 +214,44 @@ const videoController = {
   isCompleted: false,
   
   initializeVideo() {
-    // Embed Google Drive video with restricted controls
-    // Monitor playback progress
+    // Embed YouTube Privacy-Enhanced video with restricted controls
+    // Use youtube-nocookie.com domain for enhanced privacy
+    // Monitor playback progress through YouTube API
     // Enable completion button when video ends
   },
   
   preventSeeking() {
-    // Disable seeking functionality
+    // Disable seeking functionality through YouTube API parameters
     // Override default video controls
+  },
+  
+  setupPrivacyEnhancedEmbed() {
+    // Configure YouTube embed with privacy-enhanced settings
+    // Set nocookie domain and privacy parameters
+    // Handle fallback for embed failures
+  }
+}
+```
+
+### Backup and Migration System
+```javascript
+const backupManager = {
+  createBackup() {
+    // Create timestamped backup of current configuration
+    // Include all serverless functions and settings
+    // Store in backup directory with clear naming
+  },
+  
+  preserveEnvironmentVariables() {
+    // Export current environment variables
+    // Create restoration scripts
+    // Document configuration dependencies
+  },
+  
+  validateBackup() {
+    // Verify backup integrity
+    // Test restoration procedures
+    // Generate backup reports
   }
 }
 ```
@@ -243,4 +274,56 @@ const prizeLogic = {
 }
 ```
 
-This design provides a comprehensive foundation for implementing the electrical safety education application with proper separation of concerns, security considerations, and maintainable code structure.
+## Privacy and Security Enhancements
+
+### YouTube Privacy-Enhanced Integration
+- **Privacy-Enhanced Embed**: Use `youtube-nocookie.com` domain to reduce tracking
+- **Cookie Management**: No cookies set until user actively plays the video
+- **Data Minimization**: Reduced data collection compared to standard YouTube embeds
+- **Fallback Handling**: Manual completion option if privacy-enhanced embed fails
+
+### Backup and Migration Strategy
+- **Automated Backup Creation**: Timestamped backups before any infrastructure changes
+- **Configuration Preservation**: Environment variables, API keys, and deployment settings
+- **File System Backup**: All serverless functions, HTML, CSS, and JavaScript files
+- **Restoration Documentation**: Clear procedures for rollback and recovery
+- **Backup Validation**: Integrity checks and restoration testing
+
+## Migration and Backup Implementation
+
+### Backup Directory Structure
+```
+backup/
+├── netlify-functions-YYYYMMDD-HHMMSS/
+│   ├── check-winners.js
+│   ├── complete-education.js
+│   ├── generate-fortune.js
+│   ├── get-quiz.js
+│   └── start-education.js
+├── config-backup-YYYYMMDD-HHMMSS/
+│   ├── environment-variables.json
+│   ├── netlify.toml
+│   └── deployment-settings.json
+└── frontend-backup-YYYYMMDD-HHMMSS/
+    ├── index.html
+    ├── styles.css
+    ├── script.js
+    └── package.json
+```
+
+### Environment Variable Backup Format
+```json
+{
+  "timestamp": "2025-01-26T14:37:34Z",
+  "platform": "netlify",
+  "variables": {
+    "GOOGLE_SHEETS_PRIVATE_KEY": "[ENCRYPTED]",
+    "GOOGLE_SHEETS_CLIENT_EMAIL": "[ENCRYPTED]",
+    "CLAUDE_API_KEY": "[ENCRYPTED]",
+    "SPREADSHEET_ID": "[ENCRYPTED]"
+  },
+  "restoration_notes": "Environment variables for electrical safety education app"
+}
+```
+
+This design provides a comprehensive foundation for implementing the electrical safety education application with proper separation of concerns, security considerations, privacy enhancements, and maintainable code structure with robust backup and migration capabilities.
