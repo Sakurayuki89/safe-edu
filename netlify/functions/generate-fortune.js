@@ -2,12 +2,6 @@
 // 🔮 AI 기반 맞춤형 운세 생성 API (Netlify Functions)
 // ========================================
 
-// Node.js 18 미만에서 fetch polyfill
-if (!globalThis.fetch) {
-    const { default: fetch } = require('node-fetch');
-    globalThis.fetch = fetch;
-}
-
 exports.handler = async (event, context) => {
     // CORS 헤더 설정
     const headers = {
