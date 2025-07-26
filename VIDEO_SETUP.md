@@ -1,30 +1,32 @@
-# 🎬 Google Drive 영상 설정 가이드
+# 🎬 YouTube 영상 설정 가이드
 
-## 1단계: Google Drive 영상 업로드
+## 1단계: YouTube 영상 업로드
 
-1. **Google Drive 접속**
-   - https://drive.google.com 접속
+1. **YouTube Studio 접속**
+   - https://studio.youtube.com 접속
    - 로그인
 
 2. **영상 파일 업로드**
-   - "새로 만들기" → "파일 업로드" 클릭
+   - "만들기" → "동영상 업로드" 클릭
    - 전기설비 안전교육 영상 파일 선택
-   - 업로드 완료까지 대기
+   - 제목, 설명 등 기본 정보 입력
 
-## 2단계: 영상 공유 설정
+## 2단계: 영상 공개 설정
 
-1. **업로드된 영상 파일 우클릭**
-   - "공유" 선택
+1. **공개 범위 설정**
+   - "공개" 또는 "링크로 공유" 선택
+   - "비공개"나 "비공개 목록"은 임베드 불가
 
-2. **공유 권한 설정**
-   - "링크가 있는 모든 사용자" 선택
-   - "뷰어" 권한 설정
-   - "링크 복사" 클릭
+2. **임베드 허용 설정**
+   - "고급 설정" 탭 클릭
+   - "다른 웹사이트에서 동영상 임베드 허용" 체크
+   - "저장" 클릭
 
 3. **영상 ID 추출**
-   - 복사된 링크 예시: `https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view`
-   - `/d/` 다음부터 `/view` 전까지가 영상 ID
-   - 예: `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms`
+   - 업로드 완료 후 영상 URL 확인
+   - 예시: `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+   - `v=` 다음 부분이 영상 ID
+   - 예: `dQw4w9WgXcQ`
 
 ## 3단계: 코드에 영상 ID 적용
 
@@ -34,7 +36,7 @@
 const CONFIG = {
     // API 관련 설정
     API_BASE_URL: '/api',
-    VIDEO_URL: '여기에_실제_영상_ID_입력', // ← 이 부분 수정
+    VIDEO_URL: 'dQw4w9WgXcQ', // ← 여기에 실제 YouTube 영상 ID 입력
     
     // 개발 모드 설정
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
@@ -49,7 +51,7 @@ const CONFIG = {
 2. **프로덕션 테스트**
    - GitHub에 변경사항 푸시
    - Netlify 자동 재배포 대기
-   - 배포된 사이트에서 영상 재생 확인
+   - 배포된 사이트에서 YouTube 영상 재생 확인
 
 ## 🔧 영상 재생 기능
 
@@ -60,37 +62,68 @@ const CONFIG = {
 - 완료 후 "시청 완료" 버튼 표시
 
 ### 프로덕션 모드 (배포된 사이트)
-- 실제 Google Drive 영상 임베드
-- 클릭하여 영상 시작
-- 5분 영상 기준으로 진행률 추적
+- 실제 YouTube 영상 임베드
+- YouTube API를 통한 정확한 진행률 추적
+- 자동 재생 상태 감지
 - 90% 시청 시 완료로 간주
+
+## 🚀 YouTube API 기능
+
+### 자동 추적 기능
+- **실시간 진행률**: YouTube API를 통해 정확한 재생 시간 추적
+- **상태 감지**: 재생/일시정지/완료 상태 자동 감지
+- **정확한 시간**: 실제 영상 길이와 현재 재생 시간 표시
+
+### 제어 기능
+- **처음부터 다시보기**: `seekTo(0)` API 사용
+- **재생/일시정지**: `playVideo()`, `pauseVideo()` API 사용
+- **프로그래밍 제어**: JavaScript로 영상 완전 제어
 
 ## ⚠️ 주의사항
 
-1. **영상 파일 크기**
-   - 너무 큰 파일은 로딩이 느릴 수 있음
-   - 권장: 100MB 이하, 5-10분 길이
+1. **영상 권한**
+   - 반드시 "공개" 또는 "링크로 공유" 설정
+   - "임베드 허용" 옵션 체크 필수
 
-2. **영상 형식**
-   - MP4 형식 권장
-   - 웹 브라우저에서 재생 가능한 형식 사용
+2. **영상 품질**
+   - YouTube에서 자동으로 최적 품질 제공
+   - 사용자 네트워크에 맞게 자동 조절
 
-3. **공유 권한**
-   - 반드시 "링크가 있는 모든 사용자" 권한 설정
-   - 비공개 설정 시 영상이 재생되지 않음
+3. **API 의존성**
+   - YouTube IFrame API 자동 로드
+   - 네트워크 연결 필요
 
-4. **영상 시간 설정**
-   - `script.js`의 `startRealVideoTracking()` 함수에서 `videoDurationMinutes` 값을 실제 영상 길이에 맞게 조정
+4. **브라우저 호환성**
+   - 모든 모던 브라우저에서 지원
+   - JavaScript 활성화 필요
 
-## 🎯 영상 길이 변경 방법
+## 🎯 YouTube vs Google Drive 비교
 
-실제 영상 길이에 맞게 코드 수정:
+### YouTube 장점
+- ✅ **안정성**: 강력한 CDN 인프라
+- ✅ **API 지원**: 정확한 재생 상태 추적
+- ✅ **자동 품질**: 네트워크에 맞는 화질 자동 선택
+- ✅ **접근성**: 자막, 속도 조절 등 기능 제공
+- ✅ **호환성**: 모든 디바이스에서 안정적 재생
 
-```javascript
-// script.js의 startRealVideoTracking() 함수에서
-const videoDurationMinutes = 8; // 8분 영상인 경우
-```
+### Google Drive 단점
+- ❌ **제한적 API**: 정확한 재생 상태 추적 어려움
+- ❌ **쿠키 문제**: 브라우저 설정에 따른 재생 제한
+- ❌ **성능**: 상대적으로 느린 로딩 속도
+
+## 🔧 문제 해결
+
+### 영상이 재생되지 않는 경우
+1. YouTube 영상 공개 설정 확인
+2. 임베드 허용 설정 확인
+3. 영상 ID 정확성 확인
+4. 브라우저 JavaScript 활성화 확인
+
+### API 로딩 문제
+1. 네트워크 연결 상태 확인
+2. 브라우저 콘솔에서 오류 메시지 확인
+3. 다른 브라우저에서 테스트
 
 ---
 
-💡 **팁**: 영상 ID만 변경하면 즉시 새로운 영상으로 교체됩니다!
+💡 **팁**: YouTube 영상 ID만 변경하면 즉시 새로운 영상으로 교체되며, API를 통해 정확한 재생 추적이 가능합니다!
