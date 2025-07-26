@@ -87,7 +87,21 @@ exports.handler = async (event, context) => {
         
         // 추가된 행 번호 계산
         const updatedRange = appendResponse.data.updates.updatedRange;
-        const rowNumber = parseInt(updatedRange.split('!')[1].split(':')[0].replace(/[A-Z]/g, ''));
+        let rowNumber;
+        
+        try {
+            // 예: "교육참가자!A2:D2" -> "2"
+            const rangeMatch = updatedRange.match(/!([A-Z]+)(\d+):/);
+            if (rangeMatch && rangeMatch[2]) {
+                rowNumber = parseInt(rangeMatch[2]);
+            } else {
+                throw new Error('행 번호 파싱 실패');
+            }
+        } catch (parseError) {
+            console.error('행 번호 파싱 오류:', parseError, 'Range:', updatedRange);
+            // 기본값으로 현재 시간 기반 행 번호 생성
+            rowNumber = Date.now() % 10000;
+        }
         
         // 성공 응답
         return {
@@ -124,6 +138,21 @@ exports.handler = async (event, context) => {
 // 🔐 Google 인증 설정
 // ========================================
 async function getGoogleAuth() {
+    // 필수 환경 변수 확인
+    const requiredEnvVars = [
+        'GOOGLE_PROJECT_ID',
+        'GOOGLE_PRIVATE_KEY_ID', 
+        'GOOGLE_PRIVATE_KEY',
+        'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_SHEETS_ID'
+    ];
+    
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    if (missingVars.length > 0) {
+        throw new Error(`필수 환경 변수가 누락되었습니다: ${missingVars.join(', ')}`);
+    }
+    
     const credentials = {
         type: 'service_account',
         project_id: process.env.GOOGLE_PROJECT_ID,

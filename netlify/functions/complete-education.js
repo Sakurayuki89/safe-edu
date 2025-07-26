@@ -223,6 +223,21 @@ function calculateQuizScore(userAnswers, quizData) {
 // 🔐 Google 인증 설정
 // ========================================
 async function getGoogleAuth() {
+    // 필수 환경 변수 확인
+    const requiredEnvVars = [
+        'GOOGLE_PROJECT_ID',
+        'GOOGLE_PRIVATE_KEY_ID', 
+        'GOOGLE_PRIVATE_KEY',
+        'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_SHEETS_ID'
+    ];
+    
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    if (missingVars.length > 0) {
+        throw new Error(`필수 환경 변수가 누락되었습니다: ${missingVars.join(', ')}`);
+    }
+    
     const credentials = {
         type: 'service_account',
         project_id: process.env.GOOGLE_PROJECT_ID,

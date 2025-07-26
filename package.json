@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Safe Edu - 전기 안전 교육 웹 애플리케이션",
   "main": "index.html",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "netlify dev",
     "build": "echo 'Build completed'",
@@ -12,7 +15,8 @@
     "test": "python3 serve.py"
   },
   "dependencies": {
-    "googleapis": "^128.0.0"
+    "googleapis": "^128.0.0",
+    "node-fetch": "^2.7.0"
   },
   "type": "commonjs",
   "devDependencies": {
