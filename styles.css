@@ -1,0 +1,1090 @@
+/* ========================================
+   🎨 전기설비 온라인 안전교육 스타일시트
+   ======================================== */
+
+/* 한글 폰트 임포트 (Noto Sans KR) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+/* ========================================
+   🔧 기본 스타일 및 리셋
+   ======================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ========================================
+   ⏳ 로딩 화면 스타일
+   ======================================== */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 메인 컨테이너 */
+.app-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 화면 전환 시스템 */
+.screen {
+    display: none;
+    width: 100%;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    position: relative;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.screen.active {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+    animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateY(-5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 화면 전환 효과 개선 */
+.screen-transition {
+    animation: screenFadeOut 0.3s ease-in-out;
+}
+
+@keyframes screenFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+.screen-content {
+    padding: 40px;
+}
+
+/* 제목 스타일 */
+h1 {
+    text-align: center;
+    color: #667eea;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+h3 {
+    color: #555;
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* ========================================
+   📝 폼 스타일
+   ======================================== */
+.form-container {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.input-group {
+    margin-bottom: 25px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+
+
+/* 버튼 스타일 */
+.btn {
+    padding: 14px 32px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Noto Sans KR', sans-serif;
+    letter-spacing: -0.5px;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:disabled {
+    background: linear-gradient(135deg, #ccc 0%, #999 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+.btn-lucky {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    font-size: 18px;
+    padding: 18px 45px;
+    border-radius: 50px;
+    box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+    animation: luckyPulse 2s infinite;
+    position: relative;
+    min-width: 200px;
+    font-weight: 700;
+}
+
+.btn-lucky:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(240, 147, 251, 0.6);
+    background: linear-gradient(135deg, #e085f0 0%, #f04458 100%);
+}
+
+.btn-lucky::after {
+    content: '✨';
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: sparkle 1.5s infinite;
+}
+
+/* 행운 버튼 로딩 상태 */
+.btn-lucky.loading {
+    animation: luckyLoading 1.5s infinite;
+}
+
+.btn-lucky.loading::after {
+    content: '🔮';
+    animation: loadingSparkle 1s infinite;
+}
+
+@keyframes luckyPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 8px 30px rgba(240, 147, 251, 0.6);
+    }
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: translateY(-50%) scale(1.2);
+    }
+}
+
+@keyframes luckyLoading {
+    0%, 100% {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+    }
+    50% {
+        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        box-shadow: 0 8px 30px rgba(255, 154, 158, 0.6);
+    }
+}
+
+@keyframes loadingSparkle {
+    0%, 100% {
+        opacity: 1;
+        transform: translateY(-50%) rotate(0deg) scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateY(-50%) rotate(180deg) scale(1.3);
+    }
+}
+
+/* 오류 메시지 */
+.error-message {
+    color: #e74c3c;
+    font-size: 14px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* 운세 화면 스타일 */
+.fortune-content {
+    margin-bottom: 30px;
+}
+
+.fortune-section,
+.lottery-section {
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 25px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.fortune-section h3 {
+    color: #667eea;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fortune-section h3::before {
+    content: '🔮';
+    font-size: 1.2em;
+}
+
+.lottery-section h3::before {
+    content: '🍀';
+    font-size: 1.2em;
+}
+
+.fortune-text {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #555;
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    border-left: 5px solid #667eea;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.fortune-text::before {
+    content: '"';
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    font-size: 30px;
+    color: #667eea;
+    opacity: 0.3;
+}
+
+.lottery-numbers {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.lottery-number {
+    width: 55px;
+    height: 55px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    animation: bounceIn 0.6s ease-out;
+    animation-delay: calc(var(--i) * 0.1s);
+    animation-fill-mode: both;
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ========================================
+   🎬 영상 화면 스타일
+   ======================================== */
+.video-container {
+    margin-bottom: 30px;
+}
+
+.video-player {
+    width: 100%;
+    height: 400px;
+    background: #000;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+}
+
+/* 영상 제어 버튼들 */
+.video-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.video-controls .btn {
+    min-width: 120px;
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
+.video-progress {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* 평가 화면 스타일 */
+.assessment-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.question-container {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.question-container h3 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: white;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.option:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.option input[type="radio"] {
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+}
+
+.option.selected {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+/* 완료 화면 스타일 */
+.completion-content {
+    text-align: left;
+}
+
+.answer-review-section {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    border: 2px solid #e9ecef;
+}
+
+.answer-review-section h3 {
+    text-align: center;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.answer-review-section > p {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.answer-summary {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hashtag-info,
+.quiz-answers {
+    margin-bottom: 25px;
+}
+
+.hashtag-info:last-child,
+.quiz-answers:last-child {
+    margin-bottom: 0;
+}
+
+.hashtag-info h4,
+.quiz-answers h4 {
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #667eea;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-item {
+    display: flex;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.info-item .label {
+    font-weight: 600;
+    color: #555;
+    min-width: 60px;
+    margin-right: 10px;
+}
+
+.info-item .value {
+    color: #333;
+    background: #f0f4ff;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+
+
+.answer-item {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    border-left: 4px solid #667eea;
+}
+
+.answer-item:last-child {
+    margin-bottom: 0;
+}
+
+.question-text {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.answer-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.answer-number {
+    background: #667eea;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.answer-content {
+    color: #555;
+    font-weight: 500;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+    background: linear-gradient(135deg, #5a6268 0%, #3d4043 100%);
+}
+
+.employee-id-section {
+    background: #f0f4ff;
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid #667eea;
+    text-align: center;
+}
+
+/* ========================================
+   🏷️ 해시태그 표시 스타일
+   ======================================== */
+.hashtag-info {
+    margin-bottom: 30px;
+    padding: 25px;
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    border: 2px solid #dee2e6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.hashtag-item {
+    margin-bottom: 15px;
+}
+
+.hashtag-item:last-child {
+    margin-bottom: 0;
+}
+
+.hashtag-label {
+    display: block;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 15px;
+    padding: 8px 12px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.hashtag-display {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 15px 18px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #495057;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    transform: scale(1);
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+}
+
+/* 행운 해시태그 특별 스타일 */
+.hashtag-display.fortune {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border-color: #ffa726;
+    color: #e65100;
+    box-shadow: 0 3px 12px rgba(255, 167, 38, 0.2);
+}
+
+/* 안전 해시태그 특별 스타일 */
+.hashtag-display.safety {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-color: #42a5f5;
+    color: #0d47a1;
+    box-shadow: 0 3px 12px rgba(66, 165, 245, 0.2);
+}
+
+/* ========================================
+   🪟 모달 스타일
+   ======================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    animation: modalSlideIn 0.3s ease-out;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal h3 {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.modal p {
+    margin-bottom: 25px;
+    font-size: 16px;
+    line-height: 1.6;
+    white-space: pre-line; /* 줄바꿈 문자 인식 */
+}
+
+/* 창 닫기 버튼 특별 스타일 */
+.btn-close {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    color: white;
+    font-weight: 600;
+    padding: 12px 30px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.btn-close:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    background: linear-gradient(135deg, #ff5252 0%, #d63031 100%);
+}
+
+.btn-close:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+/* 접근성 개선 */
+.btn:focus,
+.input-group input:focus,
+.input-group select:focus {
+    outline: 3px solid rgba(102, 126, 234, 0.5);
+    outline-offset: 2px;
+}
+
+.option:focus-within {
+    outline: 2px solid rgba(102, 126, 234, 0.5);
+    outline-offset: 2px;
+}
+
+/* 로딩 상태 표시 */
+.btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* 성공/오류 상태 표시 */
+.input-group.success input,
+.input-group.success select {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.input-group.error input,
+.input-group.error select {
+    border-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+/* 진행 상황 표시 */
+.progress-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    gap: 10px;
+}
+
+.progress-step {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #e1e5e9;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active {
+    background: #667eea;
+    transform: scale(1.2);
+}
+
+.progress-step.completed {
+    background: #28a745;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    .screen-content {
+        padding: 25px 20px;
+    }
+    
+    h1 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+        margin-bottom: 25px;
+    }
+    
+    .video-player {
+        height: 250px;
+    }
+    
+    .lottery-numbers {
+        gap: 8px;
+    }
+    
+    .lottery-number {
+        width: 45px;
+        height: 45px;
+        font-size: 16px;
+    }
+    
+    .fortune-section,
+    .lottery-section {
+        padding: 20px;
+    }
+    
+    .btn-lucky {
+        font-size: 16px;
+        padding: 15px 35px;
+    }
+}
+
+@media (max-width: 480px) {
+    .screen-content {
+        padding: 20px 15px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    h2 {
+        font-size: 1.3rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 16px 20px;
+    }
+    
+    .btn-secondary,
+    .btn-primary {
+        width: 100%;
+    }
+    
+    .video-progress {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .video-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .video-controls .btn {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .lottery-numbers {
+        gap: 6px;
+    }
+    
+    .lottery-number {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    .action-buttons {
+        gap: 10px;
+        flex-direction: column;
+    }
+    
+    .answer-summary {
+        padding: 20px 15px;
+    }
+    
+    .answer-item {
+        padding: 15px;
+    }
+    
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .info-item .label {
+        min-width: auto;
+        margin-right: 0;
+    }
+    
+    .hashtag-info {
+        margin-bottom: 25px;
+        padding: 20px 15px;
+    }
+    
+    .hashtag-display {
+        padding: 12px 15px;
+        font-size: 13px;
+        min-height: 45px;
+    }
+    
+    .hashtag-label {
+        font-size: 14px;
+        margin-bottom: 8px;
+        padding: 6px 10px;
+    }
+    
+    .hashtag-item {
+        margin-bottom: 18px;
+    }
+    
+    .modal {
+        padding: 25px 20px;
+        margin: 20px;
+    }
+    
+    .fortune-section,
+    .lottery-section {
+        padding: 15px;
+    }
+    
+    .fortune-text {
+        padding: 20px 15px;
+    }
+}
+
+/* 다크 모드 지원 (선택사항) */
+@media (prefers-color-scheme: dark) {
+    .screen {
+        background: #1a1a1a;
+        color: #e1e1e1;
+    }
+    
+    .fortune-section,
+    .lottery-section {
+        background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+    }
+    
+    .fortune-text {
+        background: #2a2a2a;
+        color: #e1e1e1;
+    }
+    
+    .input-group input,
+    .input-group select {
+        background: #2a2a2a;
+        color: #e1e1e1;
+        border-color: #444;
+    }
+    
+    .option {
+        background: #2a2a2a;
+        border-color: #444;
+        color: #e1e1e1;
+    }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "safe-edu",
+  "version": "1.0.0",
+  "description": "Safe Edu - 전기 안전 교육 웹 애플리케이션",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Build completed'",
+    "start": "netlify dev",
+    "serve": "netlify dev",
+    "local": "python3 serve.py",
+    "test": "python3 serve.py"
+  },
+  "dependencies": {
+    "googleapis": "^128.0.0"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "keywords": [
+    "safe-edu",
+    "safety-education",
+    "quiz",
+    "netlify",
+    "google-sheets",
+    "serverless-functions"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Edu - 전기설비 온라인 안전교육</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 로딩 화면 -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <p>안전교육을 준비하고 있습니다...</p>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div id="app" class="app-container">
+        <!-- 진행 상황 표시기 -->
+        <div class="progress-indicator">
+            <div class="progress-step active" data-step="1" title="개인정보"></div>
+            <div class="progress-step" data-step="2" title="행운"></div>
+            <div class="progress-step" data-step="3" title="안전"></div>
+            <div class="progress-step" data-step="4" title="키워드"></div>
+            <div class="progress-step" data-step="5" title="완료"></div>
+        </div>
+        
+        <!-- 1단계: 사용자 정보 입력 화면 -->
+        <div id="user-info" class="screen active">
+            <div class="screen-content">
+                <h1>Safe Edu</h1>
+                <p style="text-align: center; color: #667eea; font-size: 1.2rem; margin-bottom: 20px;">전기설비 온라인 안전교육</p>
+                <h2>개인정보 입력</h2>
+                
+                <form id="user-info-form" class="form-container">
+                    <div class="input-group">
+                        <label for="user-name">이름</label>
+                        <input type="text" id="user-name" name="name" placeholder="이름을 입력해주세요" required>
+                        <span class="error-message" id="name-error"></span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="user-zodiac">띠 (12지신)</label>
+                        <select id="user-zodiac" name="zodiac" required>
+                            <option value="">띠를 선택해주세요</option>
+                            <option value="쥐">쥐띠</option>
+                            <option value="소">소띠</option>
+                            <option value="호랑이">호랑이띠</option>
+                            <option value="토끼">토끼띠</option>
+                            <option value="용">용띠</option>
+                            <option value="뱀">뱀띠</option>
+                            <option value="말">말띠</option>
+                            <option value="양">양띠</option>
+                            <option value="원숭이">원숭이띠</option>
+                            <option value="닭">닭띠</option>
+                            <option value="개">개띠</option>
+                            <option value="돼지">돼지띠</option>
+                        </select>
+                        <span class="error-message" id="zodiac-error"></span>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">다음</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2단계: 운세 및 로또 번호 화면 -->
+        <div id="fortune" class="screen">
+            <div class="screen-content">
+                <h2>이번 주 운세 & 행운의 번호</h2>
+                
+                <div class="fortune-content">
+                    <div class="fortune-section">
+                        <h3><span id="user-zodiac-display"></span>띠 이번 주 운세</h3>
+                        <div id="fortune-text" class="fortune-text"></div>
+                    </div>
+                    
+                    <div class="lottery-section">
+                        <h3>🍀 행운의 로또 번호</h3>
+                        <div id="lottery-numbers" class="lottery-numbers"></div>
+                    </div>
+                </div>
+                
+                <button id="start-education-btn" class="btn btn-primary">안전교육 시작</button>
+            </div>
+        </div>
+
+        <!-- 3단계: 안전교육 영상 시청 화면 -->
+        <div id="video" class="screen">
+            <div class="screen-content">
+                <h2>전기설비 안전교육 영상</h2>
+                
+                <div class="video-container">
+                    <div id="video-player" class="video-player">
+                        <!-- Google Drive 영상이 여기에 임베드됩니다 -->
+                    </div>
+                    
+                    <div class="video-progress">
+                        <div id="video-progress-bar" class="progress-bar">
+                            <div id="video-progress-fill" class="progress-fill"></div>
+                        </div>
+                        <span id="video-time-display">00:00 / 00:00</span>
+                    </div>
+                    
+                    <!-- 영상 제어 버튼들 -->
+                    <div class="video-controls">
+                        <button id="video-restart-btn" class="btn btn-secondary">처음부터 다시보기</button>
+                        <button id="video-pause-btn" class="btn btn-secondary">일시정지</button>
+                        <button id="video-resume-btn" class="btn btn-secondary" style="display: none;">재생</button>
+                    </div>
+                </div>
+                
+                <button id="video-complete-btn" class="btn btn-primary" style="display: none;">시청 완료</button>
+            </div>
+        </div>
+
+        <!-- 4단계: 교육 평가 화면 -->
+        <div id="assessment" class="screen">
+            <div class="screen-content">
+                <h2>교육 평가</h2>
+                <p>영상 내용을 바탕으로 문제를 풀어주세요.</p>
+                
+                <form id="assessment-form" class="assessment-form">
+                    <!-- 퀴즈 문제들이 JavaScript로 동적 생성됩니다 -->
+                    <div id="quiz-questions-container">
+                        <!-- 문제들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                    
+                    <span class="error-message" id="assessment-error"></span>
+                    <button type="submit" class="btn btn-primary" disabled>답변 확인하러 가기</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 5단계: 교육 완료 및 답변 확인 화면 -->
+        <div id="completion" class="screen">
+            <div class="screen-content">
+                <h2>🎉 교육 완료!</h2>
+                <p>안전교육을 성공적으로 완료하셨습니다.</p>
+                
+                <div class="completion-content">
+                    <!-- 답변 확인 및 수정 섹션 -->
+                    <div class="answer-review-section">
+                        <h3>📝 제출한 답변 확인</h3>
+                        <p>답변을 확인하고 필요시 수정할 수 있습니다.</p>
+                        
+                        <div class="answer-summary">
+                            <div class="hashtag-info">
+                                <h4>🏷️ 생성된 키워드</h4>
+                                <div class="hashtag-item">
+                                    <span class="hashtag-label">🍀 행운 해시태그:</span>
+                                    <div id="review-fortune-hashtags" class="hashtag-display"></div>
+                                </div>
+                                <div class="hashtag-item">
+                                    <span class="hashtag-label">⚡ 안전 해시태그:</span>
+                                    <div id="review-safety-hashtags" class="hashtag-display"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="quiz-answers">
+                                <h4>평가 답변</h4>
+                                <div class="answer-item">
+                                    <div class="question-text">문제 1. 전기 작업 시 가장 중요한 안전 수칙은 무엇입니까?</div>
+                                    <div class="answer-text">
+                                        <span class="answer-number" id="answer1-number"></span>
+                                        <span class="answer-content" id="answer1-text"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="answer-item">
+                                    <div class="question-text">문제 2. 전기 화재 발생 시 올바른 대처 방법은?</div>
+                                    <div class="answer-text">
+                                        <span class="answer-number" id="answer2-number"></span>
+                                        <span class="answer-content" id="answer2-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button id="modify-answers-btn" class="btn btn-secondary">답변 수정하기</button>
+                            <button id="proceed-to-final-btn" class="btn btn-primary">최종 제출하기</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 사번 입력 섹션 (처음에는 숨김) -->
+                    <div id="employee-id-section" class="employee-id-section" style="display: none;">
+                        <h3>최종 정보 입력</h3>
+                        <div class="input-group">
+                            <label for="employee-id">사번 (7자리)</label>
+                            <input type="text" id="employee-id" name="employeeId" placeholder="1234567" maxlength="7" pattern="[0-9]{7}">
+                            <span class="error-message" id="employee-id-error"></span>
+                        </div>
+                        <button id="final-submit-btn" class="btn btn-lucky">🍀 행운 버튼</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 팝업 모달 -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-content">
+                <h3 id="modal-title"></h3>
+                <p id="modal-message"></p>
+                <button id="modal-close-btn" class="btn btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
