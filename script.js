@@ -4,7 +4,7 @@
 const CONFIG = {
     // API 관련 설정
     API_BASE_URL: '/api',
-    VIDEO_URL: '', // Google Drive 영상 URL (나중에 설정)
+    VIDEO_URL: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms', // Google Drive 영상 ID (실제 영상으로 교체 필요)
     
     // 개발 모드 설정
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
@@ -275,6 +275,8 @@ const ApiUtils = {
         }
         
         try {
+            console.log('🔮 Claude API 호출 시작:', { name, zodiac });
+            
             const response = await fetch('/.netlify/functions/generate-fortune', {
                 method: 'POST',
                 headers: {
@@ -287,17 +289,32 @@ const ApiUtils = {
                 })
             });
             
+            console.log('📡 API 응답 상태:', response.status);
+            
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ API 오류 응답:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const data = await response.json();
-            return data.fortune;
+            console.log('✅ Claude API 응답 성공:', data);
+            
+            if (data.success && data.fortune) {
+                return data.fortune;
+            } else if (data.fallback) {
+                console.log('⚠️ Claude API 실패, 기본 운세 사용:', data.message);
+                return data.fortune;
+            } else {
+                throw new Error('Invalid API response format');
+            }
             
         } catch (error) {
-            console.error('AI 운세 생성 API 호출 실패:', error);
+            console.error('❌ AI 운세 생성 API 호출 실패:', error);
             // 실패 시 기본 운세 반환
-            return FORTUNE_DATA[zodiac] || '이번 주는 안전을 최우선으로 하며 좋은 성과를 거둘 것입니다.';
+            const fallbackFortune = FORTUNE_DATA[zodiac] || '이번 주는 안전을 최우선으로 하며 좋은 성과를 거둘 것입니다.';
+            console.log('🔄 기본 운세로 폴백:', fallbackFortune);
+            return fallbackFortune;
         }
     },
     
@@ -673,19 +690,68 @@ const screenManager = {
         this.setupVideoEventListeners(progressFill, timeDisplay, completeBtn, restartBtn, pauseBtn, resumeBtn);
     },
     
-    // 영상 플레이어 설정 (별도 함수로 분리)
+    // 영상 플레이어 설정 (Google Drive 영상 임베드)
     setupVideoPlayer(videoPlayer) {
-        videoPlayer.innerHTML = `
-            <div style="text-align: center;">
-                <p>🎬 안전교육 영상</p>
-                <p style="font-size: 14px; margin-top: 10px;">
-                    실제 구현 시 Google Drive 영상이 여기에 표시됩니다.
-                </p>
-                <button id="simulate-video" style="margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    영상 시청 시작
-                </button>
-            </div>
-        `;
+        // Google Drive 영상 ID (환경에 따라 다른 영상 사용)
+        const videoId = CONFIG.DEVELOPMENT_MODE ? 
+            '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms' : // 개발용 샘플 ID
+            CONFIG.VIDEO_URL || '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'; // 실제 영상 ID
+        
+        if (CONFIG.DEVELOPMENT_MODE) {
+            // 개발 모드: 시뮬레이션 버튼
+            videoPlayer.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
+                    <p style="font-size: 18px; margin-bottom: 10px;">🎬 전기설비 안전교육 영상</p>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+                        개발 모드: 10초 시뮬레이션으로 진행됩니다
+                    </p>
+                    <button id="simulate-video" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                        📺 영상 시청 시작
+                    </button>
+                </div>
+            `;
+        } else {
+            // 프로덕션 모드: 실제 Google Drive 영상
+            videoPlayer.innerHTML = `
+                <div style="position: relative; width: 100%; height: 400px;">
+                    <iframe 
+                        id="safety-video"
+                        src="https://drive.google.com/file/d/${videoId}/preview" 
+                        width="100%" 
+                        height="100%" 
+                        frameborder="0"
+                        allow="autoplay; encrypted-media"
+                        allowfullscreen
+                        style="border-radius: 10px;">
+                    </iframe>
+                    <div id="video-overlay" style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 10px;
+                        cursor: pointer;
+                    ">
+                        <div style="text-align: center; color: white;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">▶️</div>
+                            <p style="font-size: 18px; margin: 0;">영상을 시작하려면 클릭하세요</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 오버레이 클릭 시 영상 시작
+            const overlay = videoPlayer.querySelector('#video-overlay');
+            overlay.addEventListener('click', () => {
+                overlay.style.display = 'none';
+                this.startRealVideoTracking();
+            });
+        }
     },
     
     // 영상 이벤트 리스너 설정 (별도 함수로 분리)
@@ -790,6 +856,43 @@ const screenManager = {
             if (this.videoState.currentProgress >= this.videoState.totalDuration) {
                 clearInterval(this.videoState.progressInterval);
                 this.videoState.isPlaying = false;
+                this.showVideoCompleteButton(completeBtn);
+            }
+        }, 1000);
+    },
+    
+    // 실제 영상 추적 시작 (Google Drive 영상용)
+    startRealVideoTracking() {
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
+        
+        // 실제 영상 시간 (분:초 형식으로 설정)
+        const videoDurationMinutes = 5; // 5분 영상으로 가정
+        const videoDurationSeconds = videoDurationMinutes * 60;
+        
+        let currentTime = 0;
+        
+        // 1초마다 진행률 업데이트
+        this.videoState.progressInterval = setInterval(() => {
+            currentTime += 1;
+            const progressPercentage = (currentTime / videoDurationSeconds) * 100;
+            
+            // 진행 바 업데이트
+            progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
+            
+            // 시간 표시 업데이트
+            const currentMinutes = Math.floor(currentTime / 60);
+            const currentSeconds = currentTime % 60;
+            const totalMinutes = Math.floor(videoDurationSeconds / 60);
+            const totalSeconds = videoDurationSeconds % 60;
+            
+            timeDisplay.textContent = 
+                `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
+            
+            // 영상 완료 시 처리 (90% 시청 시 완료로 간주)
+            if (currentTime >= videoDurationSeconds * 0.9) {
+                clearInterval(this.videoState.progressInterval);
                 this.showVideoCompleteButton(completeBtn);
             }
         }, 1000);

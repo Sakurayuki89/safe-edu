@@ -33,10 +33,13 @@ exports.handler = async (event, context) => {
     }
     
     try {
+        console.log('🔮 Claude API 함수 호출됨');
         const { name, zodiac, context } = JSON.parse(event.body || '{}');
+        console.log('📝 입력 데이터:', { name, zodiac, context });
         
         // 입력 데이터 검증
         if (!name || !zodiac) {
+            console.log('❌ 필수 데이터 누락');
             return {
                 statusCode: 400,
                 headers,
@@ -49,14 +52,17 @@ exports.handler = async (event, context) => {
         
         // Claude API 키 확인
         const apiKey = process.env.CLAUDE_API_KEY;
+        console.log('🔑 Claude API 키 확인:', apiKey ? '설정됨' : '누락됨');
+        
         if (!apiKey) {
-            console.error('CLAUDE_API_KEY 환경 변수가 설정되지 않았습니다.');
+            console.log('⚠️ Claude API 키가 없어 기본 운세 사용');
+            const fallbackFortune = getFallbackFortune(zodiac);
             return {
                 statusCode: 200,
                 headers,
                 body: JSON.stringify({
                     success: true,
-                    fortune: getFallbackFortune(zodiac),
+                    fortune: fallbackFortune,
                     fallback: true,
                     message: 'AI 서비스 설정에 문제가 있어 기본 운세를 제공합니다.'
                 })
@@ -65,9 +71,12 @@ exports.handler = async (event, context) => {
         
         // Claude API 호출을 위한 프롬프트 생성
         const prompt = createFortunePrompt(name, zodiac, context);
+        console.log('📝 생성된 프롬프트 길이:', prompt.length);
         
         // Claude API 호출
+        console.log('🤖 Claude API 호출 시작');
         const fortuneResponse = await callClaudeAPI(apiKey, prompt);
+        console.log('✅ Claude API 응답 성공:', fortuneResponse.substring(0, 50) + '...');
         
         // 성공 응답
         return {
@@ -85,10 +94,12 @@ exports.handler = async (event, context) => {
         };
         
     } catch (error) {
-        console.error('AI 운세 생성 중 오류 발생:', error);
+        console.error('❌ AI 운세 생성 중 오류 발생:', error);
         
         // 오류 시 기본 운세 반환
-        const fallbackFortune = getFallbackFortune(JSON.parse(event.body || '{}')?.zodiac);
+        const zodiacFromBody = JSON.parse(event.body || '{}')?.zodiac;
+        const fallbackFortune = getFallbackFortune(zodiacFromBody);
+        console.log('🔄 기본 운세로 폴백:', fallbackFortune.substring(0, 30) + '...');
         
         return {
             statusCode: 200,
@@ -97,7 +108,8 @@ exports.handler = async (event, context) => {
                 success: true,
                 fortune: fallbackFortune,
                 fallback: true,
-                message: 'AI 서비스 일시 장애로 기본 운세를 제공합니다.'
+                message: 'AI 서비스 일시 장애로 기본 운세를 제공합니다.',
+                error: error.message
             })
         };
     }
@@ -135,6 +147,26 @@ function createFortunePrompt(name, zodiac, context) {
 // 🤖 Claude API 호출 함수
 // ========================================
 async function callClaudeAPI(apiKey, prompt) {
+    console.log('🌐 Claude API 요청 시작');
+    
+    const requestBody = {
+        model: 'claude-3-haiku-20240307', // 빠르고 경제적인 모델 사용
+        max_tokens: 200,
+        temperature: 0.7,
+        messages: [
+            {
+                role: 'user',
+                content: prompt
+            }
+        ]
+    };
+    
+    console.log('📤 요청 데이터:', { 
+        model: requestBody.model, 
+        max_tokens: requestBody.max_tokens,
+        prompt_length: prompt.length 
+    });
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -142,30 +174,28 @@ async function callClaudeAPI(apiKey, prompt) {
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({
-            model: 'claude-3-haiku-20240307', // 빠르고 경제적인 모델 사용
-            max_tokens: 200,
-            temperature: 0.7,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
-        })
+        body: JSON.stringify(requestBody)
     });
     
+    console.log('📥 Claude API 응답 상태:', response.status);
+    
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Claude API 호출 실패: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        const errorText = await response.text();
+        console.error('❌ Claude API 오류 응답:', errorText);
+        const errorData = JSON.parse(errorText).catch(() => ({}));
+        throw new Error(`Claude API 호출 실패: ${response.status} - ${errorData.error?.message || errorText}`);
     }
     
     const data = await response.json();
+    console.log('📋 Claude API 응답 구조:', Object.keys(data));
     
     // Claude API 응답에서 텍스트 추출
     if (data.content && data.content[0] && data.content[0].text) {
-        return data.content[0].text.trim();
+        const fortuneText = data.content[0].text.trim();
+        console.log('✨ 생성된 운세:', fortuneText.substring(0, 50) + '...');
+        return fortuneText;
     } else {
+        console.error('❌ 잘못된 응답 형식:', data);
         throw new Error('Claude API 응답 형식이 올바르지 않습니다.');
     }
 }
