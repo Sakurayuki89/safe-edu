@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 없는 테스트</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Safe Edu - CSS 전용 테스트</h1>
+        
+        <div class="status">
+            ✅ 이 페이지가 즉시 로딩되면 CSS는 문제없습니다!
+        </div>
+        
+        <p><strong>테스트 목적:</strong></p>
+        <ul>
+            <li>이 페이지가 빠르게 로딩되면 → JavaScript가 문제</li>
+            <li>이 페이지도 느리게 로딩되면 → CSS나 브라우저가 문제</li>
+            <li>모든 페이지가 느리면 → 시스템이나 브라우저 문제</li>
+        </ul>
+        
+        <p><strong>다음 단계:</strong></p>
+        <ol>
+            <li>이 페이지 로딩 속도 확인</li>
+            <li>test-minimal.html 로딩 속도 확인</li>
+            <li>결과에 따라 문제 원인 파악</li>
+        </ol>
+    </div>
+</body>
+</html>

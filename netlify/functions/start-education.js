@@ -1,8 +1,8 @@
 // ========================================
-// 📝 교육 시작 - 사용자 정보 저장 API
+// 🚀 교육 시작 처리 API (Netlify Functions)
 // ========================================
 
-import { google } from 'googleapis';
+const { google } = require('googleapis');
 
 exports.handler = async (event, context) => {
     // CORS 헤더 설정
@@ -37,23 +37,20 @@ exports.handler = async (event, context) => {
     try {
         const { name, zodiac } = JSON.parse(event.body || '{}');
         
-        // 입력 데이터 검증
+        // 필수 데이터 검증
         if (!name || !zodiac) {
             return {
                 statusCode: 400,
                 headers,
                 body: JSON.stringify({
                     error: 'Missing required fields',
-                    message: '이름과 띠 정보가 필요합니다.'
+                    message: '이름과 띠 정보가 필요합니다.',
+                    required: ['name', 'zodiac']
                 })
             };
         }
         
-        // Google Sheets 인증 설정
-        const auth = await getGoogleAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
-        
-        // 현재 시간 생성
+        // 시작 시간 생성
         const startTime = new Date().toLocaleString('ko-KR', {
             year: 'numeric',
             month: '2-digit',
@@ -64,27 +61,33 @@ exports.handler = async (event, context) => {
             hour12: false
         });
         
-        // Google Sheets에 초기 데이터 저장
-        // 헤더: [SubmissionTime, EducationMonth, Name, Zodiac, EmployeeID, QuizScore, IsWinner, CompletionTime]
-        const educationMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-        
-        const values = [
-            [startTime, educationMonth, name, zodiac, '', '', '', ''] // 빈 값들은 나중에 업데이트
-        ];
+        // Google Sheets 인증 설정
+        const auth = await getGoogleAuth();
+        const sheets = google.sheets({ version: 'v4', auth });
         
         const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-        const range = '교육참가자!A:H'; // 1번째 탭 (SubmissionTime~CompletionTime)
         
-        const response = await sheets.spreadsheets.values.append({
+        // 새 행 추가 (A, B, C, D 컬럼)
+        // A: Name, B: Zodiac, C: StartTime, D: Status
+        const range = '교육참가자!A:D';
+        const values = [[
+            name,
+            zodiac,
+            startTime,
+            '진행중'
+        ]];
+        
+        const appendResponse = await sheets.spreadsheets.values.append({
             spreadsheetId,
             range,
             valueInputOption: 'RAW',
+            insertDataOption: 'INSERT_ROWS',
             resource: { values }
         });
         
-        // 생성된 행 번호 추출 (나중에 업데이트할 때 사용)
-        const updatedRange = response.data.updates.updatedRange;
-        const rowNumber = updatedRange.match(/(\d+)$/)[1];
+        // 추가된 행 번호 계산
+        const updatedRange = appendResponse.data.updates.updatedRange;
+        const rowNumber = parseInt(updatedRange.split('!')[1].split(':')[0].replace(/[A-Z]/g, ''));
         
         // 성공 응답
         return {
@@ -97,7 +100,7 @@ exports.handler = async (event, context) => {
                     name,
                     zodiac,
                     startTime,
-                    rowNumber: parseInt(rowNumber)
+                    rowNumber
                 }
             })
         };
@@ -115,7 +118,7 @@ exports.handler = async (event, context) => {
             })
         };
     }
-}
+};
 
 // ========================================
 // 🔐 Google 인증 설정

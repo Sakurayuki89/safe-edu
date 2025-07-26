@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safe Edu - 전기설비 온라인 안전교육</title>
+    
+    <!-- 로컬 테스트용: 폰트 로딩 제거 (필요시 주석 해제)
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    -->
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -116,17 +123,29 @@
         <!-- 4단계: 교육 평가 화면 -->
         <div id="assessment" class="screen">
             <div class="screen-content">
-                <h2>교육 평가</h2>
-                <p>영상 내용을 바탕으로 문제를 풀어주세요.</p>
+                <div class="assessment-header">
+                    <h2>📝 교육 평가</h2>
+                    <p class="assessment-description">시청하신 안전교육 영상 내용을 바탕으로 문제를 풀어주세요.</p>
+                    <div class="assessment-progress">
+                        <span class="progress-text">문제 진행률: <span id="quiz-progress">0/2</span></span>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="quiz-progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
                 
                 <form id="assessment-form" class="assessment-form">
-                    <!-- 퀴즈 문제들이 JavaScript로 동적 생성됩니다 -->
-                    <div id="quiz-questions-container">
-                        <!-- 문제들이 여기에 동적으로 추가됩니다 -->
+                    <div id="quiz-questions-container" class="quiz-container">
+                        <!-- 퀴즈 문제들이 JavaScript로 동적 생성됩니다 -->
                     </div>
                     
-                    <span class="error-message" id="assessment-error"></span>
-                    <button type="submit" class="btn btn-primary" disabled>답변 확인하러 가기</button>
+                    <div class="assessment-footer">
+                        <span class="error-message" id="assessment-error"></span>
+                        <button type="submit" class="btn btn-primary btn-large" disabled>
+                            <span class="btn-icon">✅</span>
+                            답변 확인하러 가기
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -138,14 +157,11 @@
                 <p>안전교육을 성공적으로 완료하셨습니다.</p>
                 
                 <div class="completion-content">
-                    <!-- 답변 확인 및 수정 섹션 -->
-                    <div class="answer-review-section">
-                        <h3>📝 제출한 답변 확인</h3>
-                        <p>답변을 확인하고 필요시 수정할 수 있습니다.</p>
-                        
-                        <div class="answer-summary">
+                    <!-- 교육 완료 요약 섹션 -->
+                    <div class="completion-summary-section">
+                        <div class="completion-summary">
                             <div class="hashtag-info">
-                                <h4>🏷️ 생성된 키워드</h4>
+                                <h3>🏷️ 생성된 키워드</h3>
                                 <div class="hashtag-item">
                                     <span class="hashtag-label">🍀 행운 해시태그:</span>
                                     <div id="review-fortune-hashtags" class="hashtag-display"></div>
@@ -156,8 +172,8 @@
                                 </div>
                             </div>
                             
-                            <div class="quiz-answers">
-                                <h4>평가 답변</h4>
+                            <div class="quiz-summary">
+                                <h3>📋 교육 내용 확인</h3>
                                 <div class="answer-item">
                                     <div class="question-text">문제 1. 전기 작업 시 가장 중요한 안전 수칙은 무엇입니까?</div>
                                     <div class="answer-text">
@@ -176,9 +192,8 @@
                             </div>
                         </div>
                         
-                        <div class="action-buttons">
-                            <button id="modify-answers-btn" class="btn btn-secondary">답변 수정하기</button>
-                            <button id="proceed-to-final-btn" class="btn btn-primary">최종 제출하기</button>
+                        <div class="completion-action">
+                            <button id="proceed-to-final-btn" class="btn btn-primary btn-large">🍀 행운 이벤트 참여하기</button>
                         </div>
                     </div>
                     
@@ -190,8 +205,9 @@
                             <input type="text" id="employee-id" name="employeeId" placeholder="1234567" maxlength="7" pattern="[0-9]{7}">
                             <span class="error-message" id="employee-id-error"></span>
                         </div>
-                        <button id="final-submit-btn" class="btn btn-lucky">🍀 행운 버튼</button>
+                        <button id="final-complete-btn" class="btn btn-primary" style="margin-top: 20px;" disabled>최종 완료</button>
                     </div>
+
                 </div>
             </div>
         </div>

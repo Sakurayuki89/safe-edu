@@ -2,8 +2,7 @@
    🎨 전기설비 온라인 안전교육 스타일시트
    ======================================== */
 
-/* 한글 폰트 임포트 (Noto Sans KR) */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+/* 한글 폰트는 HTML에서 프리로드됨 */
 
 /* ========================================
    🔧 기본 스타일 및 리셋
@@ -19,12 +18,18 @@ html {
 }
 
 body {
-    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Malgun Gothic', '맑은 고딕', sans-serif;
     line-height: 1.6;
     color: #333;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea; /* 단순한 배경으로 빠른 로딩 */
     min-height: 100vh;
     overflow-x: hidden;
+}
+
+/* 페이지 로드 후 그라디언트 적용 */
+body.loaded {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: background 0.5s ease;
 }
 
 /* ========================================
@@ -79,16 +84,10 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     position: relative;
-    transform: translateY(20px);
-    opacity: 0;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .screen.active {
     display: block;
-    transform: translateY(0);
-    opacity: 1;
-    animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideInUp {
@@ -488,110 +487,294 @@ h3 {
     transition: width 0.3s ease;
 }
 
-/* 평가 화면 스타일 */
+/* ========================================
+   📝 교육 평가 화면 스타일 (개선됨)
+   ======================================== */
+.assessment-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 18px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+}
+
+.assessment-header h2 {
+    color: white;
+    margin-bottom: 8px;
+    font-size: 1.3rem;
+}
+
+.assessment-description {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-bottom: 15px;
+}
+
+.assessment-progress {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.progress-text {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.progress-bar-container {
+    height: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #fff 0%, #f0f4ff 100%);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 3px;
+}
+
 .assessment-form {
     max-width: 600px;
     margin: 0 auto;
 }
 
-.question-container {
-    background: #f8f9fa;
-    padding: 25px;
-    border-radius: 10px;
-    margin-bottom: 25px;
-}
-
-.question-container h3 {
-    margin-bottom: 20px;
-    color: #333;
-}
-
-.options {
+.quiz-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
-.option {
+.quiz-question-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.quiz-question-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.question-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.question-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    padding: 12px 15px;
-    background: white;
-    border: 2px solid #e1e5e9;
-    border-radius: 8px;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.question-title {
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    margin: 0;
+    flex: 1;
+}
+
+.quiz-options {
+    display: grid;
+    gap: 10px;
+}
+
+.quiz-option-card {
+    display: block;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.option:hover {
-    border-color: #667eea;
-    background: #f0f4ff;
+.quiz-option-card input[type="radio"] {
+    display: none;
 }
 
-.option input[type="radio"] {
+.option-content {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.option-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.quiz-option-card:hover .option-content {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateX(2px);
+}
+
+.quiz-option-card:hover .option-content::before {
+    left: 100%;
+}
+
+.quiz-option-card input[type="radio"]:checked + .option-content {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+    box-shadow: 0 3px 12px rgba(102, 126, 234, 0.2);
+}
+
+.option-number {
+    background: #6c757d;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
     margin-right: 12px;
-    width: 18px;
-    height: 18px;
+    transition: all 0.3s ease;
 }
 
-.option.selected {
-    border-color: #667eea;
-    background: #f0f4ff;
+.quiz-option-card input[type="radio"]:checked + .option-content .option-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transform: scale(1.1);
 }
 
-/* 완료 화면 스타일 */
+.option-text {
+    flex: 1;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.option-check {
+    color: #667eea;
+    font-size: 16px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.3s ease;
+}
+
+.quiz-option-card input[type="radio"]:checked + .option-content .option-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.assessment-footer {
+    text-align: center;
+    padding: 18px;
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 2px solid #dee2e6;
+}
+
+.btn-large {
+    font-size: 16px;
+    padding: 16px 40px;
+    min-width: 250px;
+    border-radius: 12px;
+}
+
+.btn-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+.btn-ready {
+    animation: readyPulse 2s infinite;
+}
+
+@keyframes readyPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+}
+
+/* ========================================
+   🎉 완료 화면 스타일 (개선됨)
+   ======================================== */
 .completion-content {
     text-align: left;
 }
 
-.answer-review-section {
-    background: #f8f9fa;
+.completion-summary-section {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
     padding: 30px;
-    border-radius: 15px;
     margin-bottom: 30px;
-    border: 2px solid #e9ecef;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    border: 2px solid rgba(102, 126, 234, 0.1);
 }
 
-.answer-review-section h3 {
-    text-align: center;
-    color: #667eea;
-    margin-bottom: 10px;
-}
-
-.answer-review-section > p {
-    text-align: center;
-    color: #666;
-    margin-bottom: 25px;
-}
-
-.answer-summary {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.completion-summary {
+    display: grid;
+    gap: 25px;
 }
 
 .hashtag-info,
-.quiz-answers {
-    margin-bottom: 25px;
+.quiz-summary {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e9ecef;
 }
 
-.hashtag-info:last-child,
-.quiz-answers:last-child {
-    margin-bottom: 0;
-}
-
-.hashtag-info h4,
-.quiz-answers h4 {
+.hashtag-info h3,
+.quiz-summary h3 {
     color: #333;
-    margin-bottom: 15px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #667eea;
-    font-size: 1.1rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #667eea;
+    font-size: 1.2rem;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+}
+
+.completion-action {
+    text-align: center;
+    padding: 25px;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+    border-radius: 15px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
 }
 
 .info-item {
@@ -904,7 +1087,9 @@ h3 {
     background: #28a745;
 }
 
-/* 반응형 디자인 */
+/* ========================================
+   📱 반응형 디자인 (개선됨)
+   ======================================== */
 @media (max-width: 768px) {
     .app-container {
         padding: 10px;
@@ -946,6 +1131,64 @@ h3 {
     .btn-lucky {
         font-size: 16px;
         padding: 15px 35px;
+    }
+    
+    /* 교육 평가 화면 모바일 최적화 */
+    .assessment-header {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .assessment-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .quiz-question-card {
+        padding: 20px;
+    }
+    
+    .question-header {
+        gap: 12px;
+    }
+    
+    .question-number {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+    }
+    
+    .question-title {
+        font-size: 1rem;
+    }
+    
+    .option-content {
+        padding: 12px 15px;
+    }
+    
+    .option-number {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+        margin-right: 12px;
+    }
+    
+    .option-text {
+        font-size: 14px;
+    }
+    
+    .btn-large {
+        font-size: 15px;
+        padding: 14px 30px;
+        min-width: 200px;
+    }
+    
+    .completion-summary-section {
+        padding: 20px;
+    }
+    
+    .hashtag-info,
+    .quiz-summary {
+        padding: 20px;
     }
 }
 
@@ -1003,10 +1246,6 @@ h3 {
         flex-direction: column;
     }
     
-    .answer-summary {
-        padding: 20px 15px;
-    }
-    
     .answer-item {
         padding: 15px;
     }
@@ -1024,7 +1263,7 @@ h3 {
     
     .hashtag-info {
         margin-bottom: 25px;
-        padding: 20px 15px;
+        padding: 15px;
     }
     
     .hashtag-display {
@@ -1054,6 +1293,115 @@ h3 {
     }
     
     .fortune-text {
+        padding: 20px 15px;
+    }
+    
+    /* 교육 평가 화면 초소형 화면 최적화 */
+    .assessment-header {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .assessment-header h2 {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+    }
+    
+    .assessment-description {
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+    
+    .assessment-progress {
+        padding: 12px;
+    }
+    
+    .quiz-container {
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .quiz-question-card {
+        padding: 15px;
+    }
+    
+    .question-header {
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .question-number {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+    }
+    
+    .question-title {
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+    
+    .quiz-options {
+        gap: 10px;
+    }
+    
+    .option-content {
+        padding: 10px 12px;
+    }
+    
+    .option-number {
+        width: 22px;
+        height: 22px;
+        font-size: 11px;
+        margin-right: 10px;
+    }
+    
+    .option-text {
+        font-size: 13px;
+        line-height: 1.3;
+    }
+    
+    .option-check {
+        font-size: 16px;
+    }
+    
+    .assessment-footer {
+        padding: 20px 15px;
+    }
+    
+    .btn-large {
+        font-size: 14px;
+        padding: 12px 25px;
+        min-width: 180px;
+    }
+    
+    .btn-icon {
+        font-size: 16px;
+        margin-right: 6px;
+    }
+    
+    .completion-summary-section {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .completion-summary {
+        gap: 20px;
+    }
+    
+    .hashtag-info,
+    .quiz-summary {
+        padding: 15px;
+    }
+    
+    .hashtag-info h3,
+    .quiz-summary h3 {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+    }
+    
+    .completion-action {
         padding: 20px 15px;
     }
 }
@@ -1086,5 +1434,76 @@ h3 {
         background: #2a2a2a;
         border-color: #444;
         color: #e1e1e1;
+    }
+}/* ===
+=====================================
+   🏷️ 해시태그 스타일
+   ======================================== */
+.hashtag {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 2px;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.hashtag-display {
+    margin-top: 10px;
+    line-height: 1.8;
+}
+
+.hashtag-item {
+    margin-bottom: 15px;
+}
+
+.hashtag-label {
+    font-weight: 600;
+    color: #333;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* ========================================
+   🎉 완료 화면 스타일
+   ======================================== */
+.lucky-section {
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 40px;
+    border-radius: 15px;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.lucky-section h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+.lucky-section p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+/* ========================================
+   📱 반응형 개선
+   ======================================== */
+@media (max-width: 768px) {
+    .hashtag {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+    
+    .lucky-section {
+        padding: 30px 20px;
+    }
+    
+    .lucky-section h3 {
+        font-size: 20px;
     }
 }

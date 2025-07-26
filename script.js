@@ -1,52 +1,30 @@
 // ========================================
-// 🔧 설정값 (나중에 변경 가능한 값들)
+// 🔧 빠른 로딩을 위한 간소화된 설정
 // ========================================
+console.log('Script 로드 시작:', new Date().toLocaleTimeString());
+
 const CONFIG = {
-    // API 관련 설정
-    API_BASE_URL: '/api',
-    VIDEO_URL: 'VxMnsSZJqUI', // YouTube 영상 ID (실제 영상으로 교체 필요)
-
-    // 개발 모드 설정
+    API_BASE_URL: '/.netlify/functions',
+    VIDEO_URL: '1EMOjJ1Fju4JNvxUCbnrgq1g99SRmZhGU',
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
-
-    // 행운 이벤트 설정
-    WIN_PROBABILITY: 0.1, // 10% 당첨 확률 (0.0 ~ 1.0)
-    MAX_WINNERS: 100, // 최대 당첨자 수
-
-    // UI 관련 설정
-    LOADING_DELAY: 1000, // 로딩 화면 표시 시간 (밀리초)
-    SCREEN_TRANSITION_DELAY: 300, // 화면 전환 지연 시간 (밀리초)
-    API_SIMULATION_DELAY: 1500, // API 호출 시뮬레이션 지연 시간 (밀리초)
-
-    // 영상 관련 설정
-    VIDEO_SIMULATION_DURATION: 10, // 영상 시뮬레이션 시간 (초)
-
-    // 유효성 검사 설정
-    EMPLOYEE_ID_LENGTH: 7, // 사번 자릿수
-    LOTTERY_NUMBER_COUNT: 6, // 로또 번호 개수
-    LOTTERY_NUMBER_MAX: 45 // 로또 번호 최대값
+    LOADING_DELAY: 0, // 즉시 로딩
+    VIDEO_SIMULATION_DURATION: 10,
+    WIN_PROBABILITY: 0.1,
+    MAX_WINNERS: 100
 };
 
-// ========================================
-// 💾 사용자 세션 데이터 관리
-// ========================================
 const userSession = {
     name: '',
     zodiac: '',
-    rowNumber: null, // Google Sheets 행 번호 (백엔드 연동용)
-    quizAnswers: [], // 배열로 변경 (백엔드 형식에 맞춤)
+    quizAnswers: [],
     isWinner: false,
     employeeId: '',
-    startTime: null,
-    completionTime: null,
-    quizData: [] // 동적으로 로드된 퀴즈 데이터 저장
+    quizData: [],
+    videoCompleted: false,
+    quizScore: 0,  // 시청 완료 버튼 클릭 횟수
+    rowNumber: null  // Google Sheets 행 번호
 };
 
-// ========================================
-// 📊 데이터 (콘텐츠 관련 정보)
-// ========================================
-
-// 12지신별 운세 데이터 (나중에 변경 가능)
 const FORTUNE_DATA = {
     '쥐': '이번 주는 새로운 기회가 찾아올 것입니다. 전기 안전에 특히 주의하시고, 작업 전 점검을 철저히 하세요.',
     '소': '꾸준함이 빛을 발하는 한 주입니다. 안전 수칙을 차근차근 지키며 작업하시면 좋은 결과가 있을 것입니다.',
@@ -62,37 +40,7 @@ const FORTUNE_DATA = {
     '돼지': '풍요롭고 만족스러운 한 주가 될 것입니다. 여유로운 마음으로 안전 교육에 임해보세요.'
 };
 
-// 퀴즈 문제 및 정답 데이터 (나중에 변경 가능)
-const QUIZ_DATA = {
-    questions: [
-        {
-            id: 1,
-            question: '전기 작업 시 가장 중요한 안전 수칙은 무엇입니까?',
-            options: [
-                '작업 전 전원 차단 확인',
-                '작업복 착용',
-                '도구 점검',
-                '작업 시간 단축'
-            ],
-            correctAnswer: 1 // 정답: 작업 전 전원 차단 확인
-        },
-        {
-            id: 2,
-            question: '전기 화재 발생 시 올바른 대처 방법은?',
-            options: [
-                '물로 진화',
-                '전원 차단 후 소화기 사용',
-                '모래로 덮기',
-                '바람으로 끄기'
-            ],
-            correctAnswer: 2 // 정답: 전원 차단 후 소화기 사용
-        }
-    ]
-};
-
-
-
-// 행운 해시태그 데이터 (띠별 3개씩)
+// 해시태그 데이터
 const FORTUNE_HASHTAGS = {
     '쥐': ['#새로운기회', '#전기안전점검', '#철저한준비'],
     '소': ['#꾸준한노력', '#안전수칙준수', '#차근차근'],
@@ -108,1576 +56,983 @@ const FORTUNE_HASHTAGS = {
     '돼지': ['#풍요로운결과', '#여유로운마음', '#안전교육완주']
 };
 
-// 제철소 전기설비 정비 안전 해시태그 (4개씩 무작위 선택)
 const SAFETY_HASHTAGS = [
     '#전원차단확인', '#절연장갑착용', '#접지확인', '#전압측정',
-    '#안전거리유지', '#작업허가서확인', '#보호구착용', '#화재예방',
-    '#감전방지', '#정전작업', '#안전표지판설치', '#작업구역격리',
-    '#비상연락망확인', '#응급처치준비', '#안전교육이수', '#장비점검완료',
-    '#케이블상태확인', '#누전차단기점검', '#접촉불량방지', '#과부하방지',
-    '#정기점검실시', '#예방정비', '#안전수칙준수', '#위험요소제거',
-    '#안전의식강화', '#팀워크안전', '#상호안전점검', '#안전소통',
-    '#위험상황공유', '#안전문화정착', '#개인보호구점검', '#안전모착용'
+    '#안전거리유지', '#작업허가서확인', '#보호구착용', '#화재예방'
 ];
 
-// 오류 메시지 (나중에 변경 가능)
-const ERROR_MESSAGES = {
-    nameRequired: '이름을 입력해주세요.',
-    zodiacRequired: '띠를 선택해주세요.',
-    videoNotComplete: '영상을 끝까지 시청해주세요.',
-    quizIncomplete: '모든 문제에 답해주세요.',
-    employeeIdInvalid: `${CONFIG.EMPLOYEE_ID_LENGTH}자리 숫자를 입력해주세요.`,
-    networkError: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
-    serverError: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-    submitError: '제출 중 오류가 발생했습니다. 다시 시도해주세요.'
-};
+console.log('데이터 로드 완료:', new Date().toLocaleTimeString());
 
 // ========================================
-// 🛠️ 유틸리티 함수들 (재사용 가능한 기능들)
+// 🛠️ 유틸리티 함수들
 // ========================================
-
-// 로딩 상태 관리 유틸리티
-const LoadingUtils = {
-    // 버튼 로딩 상태 표시
-    showButtonLoading(buttonElement) {
-        buttonElement.classList.add('loading');
-        buttonElement.disabled = true;
+const Utils = {
+    generateLotteryNumbers() {
+        const numbers = [];
+        while (numbers.length < 6) {
+            const num = Math.floor(Math.random() * 45) + 1;
+            if (!numbers.includes(num)) {
+                numbers.push(num);
+            }
+        }
+        return numbers.sort((a, b) => a - b);
     },
 
-    // 버튼 로딩 상태 해제
-    hideButtonLoading(buttonElement) {
-        buttonElement.classList.remove('loading');
-        buttonElement.disabled = false;
-    }
-};
-
-// 유효성 검사 유틸리티
-const ValidationUtils = {
-    // 이름 유효성 검사
     validateName(name) {
         return name && name.trim().length > 0;
     },
 
-    // 띠 선택 유효성 검사
     validateZodiac(zodiac) {
         return zodiac && zodiac.trim().length > 0;
     },
 
-    // 사번 유효성 검사 (7자리 숫자)
     validateEmployeeId(employeeId) {
-        const pattern = new RegExp(`^\\d{${CONFIG.EMPLOYEE_ID_LENGTH}}$`);
-        return pattern.test(employeeId);
-    }
-};
-
-
-
-// 해시태그 생성 유틸리티
-const HashtagUtils = {
-    // 행운 해시태그 3개 생성 (띠 기반)
-    generateFortuneHashtags(zodiac) {
-        return FORTUNE_HASHTAGS[zodiac] || ['#행운', '#안전', '#성공'];
+        return /^\d{7}$/.test(employeeId);
     },
 
-    // 안전 해시태그 4개 무작위 생성
-    generateSafetyHashtags() {
-        const shuffled = [...SAFETY_HASHTAGS].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 4);
-    },
-
-    // 해시태그 배열을 문자열로 변환
-    hashtagsToString(hashtags) {
-        return hashtags.join(' ');
-    }
-};
-
-// 세션 관리 유틸리티
-const SessionUtils = {
-    // 세션 데이터 저장
-    saveSession() {
-        try {
-            localStorage.setItem('userSession', JSON.stringify(userSession));
-        } catch (error) {
-            console.error('세션 저장 실패:', error);
+    showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
         }
     },
 
-    // 세션 데이터 복원
-    restoreSession() {
-        try {
-            const savedSession = localStorage.getItem('userSession');
-            if (savedSession) {
-                Object.assign(userSession, JSON.parse(savedSession));
-                return true;
-            }
-        } catch (error) {
-            console.error('세션 복원 실패:', error);
-            localStorage.removeItem('userSession');
+    clearError(elementId) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
         }
-        return false;
     },
 
-    // 세션 데이터 정리
-    clearSession() {
-        try {
-            localStorage.removeItem('userSession');
-        } catch (error) {
-            console.error('세션 정리 실패:', error);
-        }
-    }
-};
-
-// API 유틸리티 (실제 API 호출 포함)
-const ApiUtils = {
-    // 사용자 정보 제출
-    async submitUserInfo(name, zodiac) {
-        // 개발 모드에서는 시뮬레이션
-        if (CONFIG.DEVELOPMENT_MODE) {
-            await new Promise(resolve => setTimeout(resolve, CONFIG.API_SIMULATION_DELAY));
-            return {
-                success: true,
-                data: {
-                    name,
-                    zodiac,
-                    startTime: new Date().toISOString(),
-                    rowNumber: Math.floor(Math.random() * 100) + 1
+    // 네트워크 요청 유틸리티 (timeout과 retry 포함)
+    async fetchWithTimeout(url, options = {}, timeout = 10000, retries = 2) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        
+        const fetchOptions = {
+            ...options,
+            signal: controller.signal
+        };
+        
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const response = await fetch(url, fetchOptions);
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-            };
-        }
-
-        try {
-            const response = await fetch('/.netlify/functions/start-education', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, zodiac })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('사용자 정보 제출 API 호출 실패:', error);
-            throw error;
-        }
-    },
-
-    // AI 기반 맞춤형 운세 생성
-    async generateCustomFortune(name, zodiac) {
-        // 개발 모드에서는 기본 운세 사용
-        if (CONFIG.DEVELOPMENT_MODE) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return FORTUNE_DATA[zodiac] || '이번 주는 안전을 최우선으로 하며 좋은 성과를 거둘 것입니다.';
-        }
-
-        try {
-            console.log('🔮 Claude API 호출 시작:', { name, zodiac });
-
-            const response = await fetch('/.netlify/functions/generate-fortune', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: name,
-                    zodiac: zodiac,
-                    context: '제철소 전기설비 정비 작업자'
-                })
-            });
-
-            console.log('📡 API 응답 상태:', response.status);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ API 오류 응답:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('✅ Claude API 응답 성공:', data);
-
-            if (data.success && data.fortune) {
-                return data.fortune;
-            } else if (data.fallback) {
-                console.log('⚠️ Claude API 실패, 기본 운세 사용:', data.message);
-                return data.fortune;
-            } else {
-                throw new Error('Invalid API response format');
-            }
-
-        } catch (error) {
-            console.error('❌ AI 운세 생성 API 호출 실패:', error);
-            // 실패 시 기본 운세 반환
-            const fallbackFortune = FORTUNE_DATA[zodiac] || '이번 주는 안전을 최우선으로 하며 좋은 성과를 거둘 것입니다.';
-            console.log('🔄 기본 운세로 폴백:', fallbackFortune);
-            return fallbackFortune;
-        }
-    },
-
-    // 퀴즈 데이터 가져오기
-    async getQuizData() {
-        // 개발 모드에서는 기본 퀴즈 데이터 사용
-        if (CONFIG.DEVELOPMENT_MODE) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return QUIZ_DATA.questions;
-        }
-
-        try {
-            const response = await fetch('/.netlify/functions/get-quiz', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
+                
+                return response;
+            } catch (error) {
+                console.warn(`API 호출 시도 ${attempt + 1}/${retries + 1} 실패:`, error.message);
+                
+                if (attempt === retries) {
+                    clearTimeout(timeoutId);
+                    throw error;
                 }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                // 재시도 전 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
             }
-
-            const data = await response.json();
-            return data.data; // 퀴즈 문제 배열 반환
-        } catch (error) {
-            console.error('퀴즈 데이터 조회 API 호출 실패:', error);
-            // 실패 시 기본 퀴즈 데이터 반환
-            return QUIZ_DATA.questions;
-        }
-    },
-
-    // 당첨자 수 확인
-    async checkWinners() {
-        // 개발 모드에서는 시뮬레이션 데이터 반환
-        if (CONFIG.DEVELOPMENT_MODE) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return { canWin: true, currentWinners: 0, maxWinners: 100 };
-        }
-
-        try {
-            const response = await fetch('/.netlify/functions/check-winners', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.data;
-        } catch (error) {
-            console.error('당첨자 수 확인 API 호출 실패:', error);
-            return { canWin: true, currentWinners: 0, maxWinners: 100 };
-        }
-    },
-
-    // 최종 데이터 제출
-    async submitFinalData(sessionData) {
-        // 개발 모드에서는 시뮬레이션
-        if (CONFIG.DEVELOPMENT_MODE) {
-            await new Promise(resolve => setTimeout(resolve, CONFIG.API_SIMULATION_DELAY));
-            console.log('개발 모드: 제출된 데이터', sessionData);
-            return {
-                success: true,
-                message: '교육이 성공적으로 완료되었습니다.',
-                data: sessionData
-            };
-        }
-
-        try {
-            const response = await fetch('/.netlify/functions/complete-education', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(sessionData)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('최종 데이터 제출 API 호출 실패:', error);
-            throw error;
         }
     }
 };
+
+console.log('유틸리티 함수 로드 완료:', new Date().toLocaleTimeString());
 
 // ========================================
-// 🖥️ 화면 관리 객체 (SPA 네비게이션)
+// 📱 화면 관리자
 // ========================================
-const screenManager = {
+const ScreenManager = {
     currentScreen: 'user-info',
-    screens: ['user-info', 'fortune', 'video', 'assessment', 'completion'],
-    screenSteps: {
-        'user-info': 1,
-        'fortune': 2,
-        'video': 3,
-        'assessment': 4,
-        'completion': 5
-    },
 
-    // 화면 전환 함수
     showScreen(screenId) {
-        const currentScreenElement = document.querySelector('.screen.active');
+        console.log('화면 전환:', screenId);
+        
+        // 모든 화면 숨기기
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+
+        // 대상 화면 보이기
         const targetScreen = document.getElementById(screenId);
-
-        if (!targetScreen) return;
-
-        // 현재 화면에 전환 효과 적용
-        if (currentScreenElement) {
-            currentScreenElement.classList.add('screen-transition');
-
-            setTimeout(() => {
-                // 모든 화면 숨기기
-                document.querySelectorAll('.screen').forEach(screen => {
-                    screen.classList.remove('active', 'screen-transition');
-                });
-
-                // 대상 화면 보이기
-                targetScreen.classList.add('active');
-                this.currentScreen = screenId;
-
-                // 진행 상황 업데이트
-                this.updateProgress(screenId);
-
-                // 화면별 초기화 함수 호출
-                this.initializeScreen(screenId);
-
-                // 스크롤을 맨 위로
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 300);
-        } else {
-            // 첫 화면인 경우 바로 표시
+        if (targetScreen) {
             targetScreen.classList.add('active');
             this.currentScreen = screenId;
             this.updateProgress(screenId);
-            this.initializeScreen(screenId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     },
 
-    // 진행 상황 업데이트
     updateProgress(screenId) {
-        const currentStep = this.screenSteps[screenId];
-        const progressSteps = document.querySelectorAll('.progress-step');
+        const steps = {
+            'user-info': 1,
+            'fortune': 2,
+            'video': 3,
+            'assessment': 4,
+            'completion': 5
+        };
 
-        progressSteps.forEach((step, index) => {
+        const currentStep = steps[screenId];
+        document.querySelectorAll('.progress-step').forEach((step, index) => {
             const stepNumber = index + 1;
             step.classList.remove('active', 'completed');
-
+            
             if (stepNumber < currentStep) {
                 step.classList.add('completed');
             } else if (stepNumber === currentStep) {
                 step.classList.add('active');
             }
         });
+    }
+};
+
+console.log('화면 관리자 로드 완료:', new Date().toLocaleTimeString());
+
+// ========================================
+// 🎬 영상 관리자
+// ========================================
+const VideoManager = {
+    videoState: {
+        isPlaying: false,
+        isPaused: false,
+        currentProgress: 0,
+        totalDuration: CONFIG.VIDEO_SIMULATION_DURATION,
+        progressInterval: null,
+        pausedAt: 0
     },
 
-    // 화면별 초기화
-    initializeScreen(screenId) {
-        switch (screenId) {
-            case 'user-info':
-                this.initUserInfoScreen();
-                break;
-            case 'fortune':
-                this.initFortuneScreen();
-                break;
-            case 'video':
-                this.initVideoScreen();
-                break;
-            case 'assessment':
-                this.initAssessmentScreen();
-                break;
-            case 'completion':
-                this.initCompletionScreen();
-                break;
-        }
-    },
-
-    // 사용자 정보 화면 초기화
-    initUserInfoScreen() {
-        const form = document.getElementById('user-info-form');
-        const nameInput = document.getElementById('user-name');
-        const zodiacSelect = document.getElementById('user-zodiac');
-
-        // 폼 제출 이벤트
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const name = nameInput.value.trim();
-            const zodiac = zodiacSelect.value;
-
-            // 유효성 검사
-            if (!this.validateUserInfo(name, zodiac)) {
-                return;
-            }
-
-            // 세션 데이터 저장
-            userSession.name = name;
-            userSession.zodiac = zodiac;
-            userSession.startTime = new Date().toISOString();
-
-            // 세션 데이터 저장
-            SessionUtils.saveSession();
-
-            try {
-                // 버튼 로딩 상태 표시
-                const submitBtn = form.querySelector('button[type="submit"]');
-                LoadingUtils.showButtonLoading(submitBtn);
-
-                // API 호출 (유틸리티 함수 사용)
-                const result = await ApiUtils.submitUserInfo(name, zodiac);
-
-                if (result.success) {
-                    // 백엔드에서 받은 행 번호 저장
-                    userSession.rowNumber = result.data.rowNumber;
-
-                    // 로딩 상태 해제
-                    LoadingUtils.hideButtonLoading(submitBtn);
-
-                    // 다음 화면으로 전환
-                    this.showScreen('fortune');
-                } else {
-                    throw new Error(result.message || '사용자 정보 저장 실패');
-                }
-            } catch (error) {
-                // 로딩 상태 해제
-                const submitBtn = form.querySelector('button[type="submit"]');
-                LoadingUtils.hideButtonLoading(submitBtn);
-
-                this.showError(error.message || ERROR_MESSAGES.networkError);
-            }
-        });
-    },
-
-    // 사용자 정보 유효성 검사 (유틸리티 함수 사용)
-    validateUserInfo(name, zodiac) {
-        let isValid = true;
-
-        // 이름 검사
-        if (!ValidationUtils.validateName(name)) {
-            this.showFieldError('name-error', ERROR_MESSAGES.nameRequired);
-            isValid = false;
-        } else {
-            this.clearFieldError('name-error');
-        }
-
-        // 띠 선택 검사
-        if (!ValidationUtils.validateZodiac(zodiac)) {
-            this.showFieldError('zodiac-error', ERROR_MESSAGES.zodiacRequired);
-            isValid = false;
-        } else {
-            this.clearFieldError('zodiac-error');
-        }
-
-        return isValid;
-    },
-
-    // 운세 화면 초기화 (AI API 기반)
-    initFortuneScreen() {
-        const zodiacDisplay = document.getElementById('user-zodiac-display');
-        const fortuneText = document.getElementById('fortune-text');
-        const lotteryNumbers = document.getElementById('lottery-numbers');
-        const startBtn = document.getElementById('start-education-btn');
-
-        // 사용자 띠 표시
-        zodiacDisplay.textContent = userSession.zodiac;
-
-        // AI 기반 맞춤형 운세 생성 및 표시
-        this.generateAIFortune(fortuneText);
-
-        // 로또 번호 생성 및 표시
-        const lotteryNums = this.generateLotteryNumbers();
-        lotteryNumbers.innerHTML = lotteryNums.map((num, index) =>
-            `<div class="lottery-number" style="--i: ${index}">${num}</div>`
-        ).join('');
-
-        // 다음 버튼 이벤트
-        startBtn.addEventListener('click', () => {
-            this.showScreen('video');
-        });
-    },
-
-    // AI 기반 맞춤형 운세 생성
-    async generateAIFortune(fortuneTextElement) {
-        // 로딩 상태 표시
-        fortuneTextElement.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <div style="width: 20px; height: 20px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                <span>🔮 ${userSession.name}님의 맞춤 운세를 생성하고 있습니다...</span>
-            </div>
-        `;
-
-        try {
-            // AI API 호출하여 맞춤형 운세 생성
-            const customFortune = await ApiUtils.generateCustomFortune(userSession.name, userSession.zodiac);
-
-            // 타이핑 효과로 운세 표시
-            this.typeFortuneText(fortuneTextElement, customFortune);
-
-        } catch (error) {
-            console.error('AI 운세 생성 실패:', error);
-            // 실패 시 기본 운세 표시
-            const fallbackFortune = FORTUNE_DATA[userSession.zodiac] || '좋은 일이 생길 것입니다.';
-            this.typeFortuneText(fortuneTextElement, fallbackFortune);
-        }
-    },
-
-    // 운세 텍스트 타이핑 효과
-    typeFortuneText(element, text) {
-        element.textContent = '';
-        let index = 0;
-
-        const typeInterval = setInterval(() => {
-            if (index < text.length) {
-                element.textContent += text.charAt(index);
-                index++;
-            } else {
-                clearInterval(typeInterval);
-                // 타이핑 완료 후 반짝임 효과
-                element.style.background = 'rgba(102, 126, 234, 0.1)';
-                setTimeout(() => {
-                    element.style.background = 'white';
-                }, 500);
-            }
-        }, 30);
-    },
-
-    // 로또 번호 생성 함수 (설정값 사용)
-    generateLotteryNumbers() {
-        const numbers = [];
-        while (numbers.length < CONFIG.LOTTERY_NUMBER_COUNT) {
-            const randomNumber = Math.floor(Math.random() * CONFIG.LOTTERY_NUMBER_MAX) + 1;
-            if (!numbers.includes(randomNumber)) {
-                numbers.push(randomNumber);
-            }
-        }
-        return numbers.sort((a, b) => a - b);
-    },
-
-    // 영상 화면 초기화 (제어 기능 추가)
-    initVideoScreen() {
+    setupVideoPlayer() {
+        console.log('영상 플레이어 설정 시작');
         const videoPlayer = document.getElementById('video-player');
-        const completeBtn = document.getElementById('video-complete-btn');
+        
+        if (CONFIG.DEVELOPMENT_MODE) {
+            // 개발 모드: 시뮬레이션
+            videoPlayer.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
+                    <p style="font-size: 18px; margin-bottom: 10px;">🎬 전기설비 안전교육 영상</p>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+                        개발 모드: ${CONFIG.VIDEO_SIMULATION_DURATION}초 시뮬레이션으로 진행됩니다
+                    </p>
+                    <button id="simulate-video" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                        📺 영상 시청 시작
+                    </button>
+                </div>
+            `;
+
+            // 시뮬레이션 버튼 이벤트
+            setTimeout(() => {
+                const simulateBtn = document.getElementById('simulate-video');
+                if (simulateBtn) {
+                    simulateBtn.addEventListener('click', () => {
+                        this.startVideoSimulation();
+                    });
+                }
+            }, 100);
+        } else {
+            // 프로덕션 모드: 실제 Google Drive 영상
+            videoPlayer.innerHTML = `
+                <div style="position: relative; width: 100%; height: 400px;">
+                    <iframe 
+                        id="safety-video"
+                        src="https://drive.google.com/file/d/${CONFIG.VIDEO_URL}/preview" 
+                        width="100%" 
+                        height="100%" 
+                        frameborder="0"
+                        allow="autoplay; encrypted-media"
+                        allowfullscreen
+                        style="border-radius: 10px;">
+                    </iframe>
+                </div>
+            `;
+
+            // 실제 영상 추적 (5분 기준)
+            this.startRealVideoTracking();
+        }
+
+        this.setupVideoControls();
+    },
+
+    startRealVideoTracking() {
+        // 실제 영상용 5분 추적
+        const videoDurationSeconds = 300; // 5분
+        let currentTime = 0;
+
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
 
-        // 영상 제어 버튼들
-        const restartBtn = document.getElementById('video-restart-btn');
-        const pauseBtn = document.getElementById('video-pause-btn');
-        const resumeBtn = document.getElementById('video-resume-btn');
+        this.videoState.progressInterval = setInterval(() => {
+            currentTime += 1;
+            const progressPercentage = (currentTime / videoDurationSeconds) * 100;
 
-        // 영상 상태 관리 객체 초기화
-        this.videoState = {
-            isPlaying: false,
-            isPaused: false,
-            currentProgress: 0,
-            totalDuration: CONFIG.VIDEO_SIMULATION_DURATION,
-            progressInterval: null
-        };
+            if (progressFill) progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
 
-        // 임시 영상 플레이어 (실제 구현 시 Google Drive 영상으로 교체)
-        this.setupVideoPlayer(videoPlayer);
+            const currentMinutes = Math.floor(currentTime / 60);
+            const currentSeconds = currentTime % 60;
+            const totalMinutes = Math.floor(videoDurationSeconds / 60);
 
-        // 이벤트 리스너 설정
-        this.setupVideoEventListeners(progressFill, timeDisplay, completeBtn, restartBtn, pauseBtn, resumeBtn);
+            if (timeDisplay) {
+                timeDisplay.textContent = 
+                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
+            }
+
+            if (currentTime >= videoDurationSeconds * 0.9) { // 90% 시청 시 완료
+                clearInterval(this.videoState.progressInterval);
+                userSession.videoCompleted = true;
+                if (completeBtn) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }, 1000);
     },
 
-    // 영상 플레이어 설정 (YouTube 영상 임베드)
-    setupVideoPlayer(videoPlayer) {
-        // YouTube 영상 ID 사용 (개발/프로덕션 모드 모두 실제 영상 사용)
-        const videoId = CONFIG.VIDEO_URL || 'HggDt3GUGYo';
+    setupVideoControls() {
+        setTimeout(() => {
+            const restartBtn = document.getElementById('video-restart-btn');
+            const pauseBtn = document.getElementById('video-pause-btn');
+            const resumeBtn = document.getElementById('video-resume-btn');
 
-        // 실제 YouTube 영상 임베드 (개발 모드에서도 실제 영상 표시)
-        videoPlayer.innerHTML = `
-            <div style="position: relative; width: 100%; height: 400px;">
-                <iframe 
-                    id="safety-video"
-                    src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&origin=${window.location.origin}" 
-                    width="100%" 
-                    height="100%" 
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                    style="border-radius: 10px;">
-                </iframe>
-                <div id="video-loading" style="
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0,0,0,0.8);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 10px;
-                    color: white;
-                    font-size: 16px;
-                ">
-                    <div style="text-align: center;">
-                        <div style="width: 40px; height: 40px; border: 3px solid #fff; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
-                        YouTube 영상을 로딩 중입니다...
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // YouTube API를 통한 영상 추적 시작
-        this.initYouTubePlayer(videoId);
+            if (restartBtn) {
+                restartBtn.addEventListener('click', () => this.restartVideo());
+            }
+            if (pauseBtn) {
+                pauseBtn.addEventListener('click', () => this.pauseVideo());
+            }
+            if (resumeBtn) {
+                resumeBtn.addEventListener('click', () => this.resumeVideo());
+            }
+        }, 100);
     },
 
-    // 영상 이벤트 리스너 설정 (별도 함수로 분리)
-    setupVideoEventListeners(progressFill, timeDisplay, completeBtn, restartBtn, pauseBtn, resumeBtn) {
-        // 처음부터 다시보기 버튼 이벤트
-        restartBtn.addEventListener('click', () => {
-            this.restartVideo(progressFill, timeDisplay, completeBtn);
-        });
-
-        // 일시정지 버튼 이벤트
-        pauseBtn.addEventListener('click', () => {
-            this.pauseVideo(pauseBtn, resumeBtn);
-        });
-
-        // 재생 버튼 이벤트
-        resumeBtn.addEventListener('click', () => {
-            this.resumeVideo(pauseBtn, resumeBtn, progressFill, timeDisplay, completeBtn);
-        });
-
-        // 시청 완료 버튼 이벤트
-        completeBtn.addEventListener('click', () => {
-            this.showScreen('assessment');
-        });
-    },
-
-    // 영상 재생 시작 (기존 함수명 변경)
-    startVideoPlayback(progressFill, timeDisplay, completeBtn) {
-        if (this.videoState.isPlaying) return; // 이미 재생 중이면 무시
+    startVideoSimulation() {
+        console.log('영상 시뮬레이션 시작');
+        if (this.videoState.isPlaying) return;
 
         this.videoState.isPlaying = true;
         this.videoState.isPaused = false;
-        this.simulateVideoProgress(progressFill, timeDisplay, completeBtn);
-    },
+        this.videoState.currentProgress = this.videoState.pausedAt || 0;
 
-    // 영상 처음부터 다시보기
-    restartVideo(progressFill, timeDisplay, completeBtn) {
-        // YouTube 영상 재시작
-        if (this.youtubePlayer && this.youtubePlayer.seekTo) {
-            this.youtubePlayer.seekTo(0);
-            this.youtubePlayer.playVideo();
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
 
-            progressFill.style.width = '0%';
-            completeBtn.style.display = 'none';
-        }
-    },
-
-    // 영상 일시정지
-    pauseVideo(pauseBtn, resumeBtn) {
-        // YouTube 영상 일시정지
-        if (this.youtubePlayer && this.youtubePlayer.pauseVideo) {
-            this.youtubePlayer.pauseVideo();
-        }
-
-        // 버튼 상태 변경
-        pauseBtn.style.display = 'none';
-        resumeBtn.style.display = 'inline-block';
-    },
-
-    // 영상 재생 재개
-    resumeVideo(pauseBtn, resumeBtn, progressFill, timeDisplay, completeBtn) {
-        // YouTube 영상 재개
-        if (this.youtubePlayer && this.youtubePlayer.playVideo) {
-            this.youtubePlayer.playVideo();
-        }
-
-        // 버튼 상태 변경
-        pauseBtn.style.display = 'inline-block';
-        resumeBtn.style.display = 'none';
-    },
-
-    // 영상 진행 시뮬레이션 (상태 관리 포함)
-    simulateVideoProgress(progressFill, timeDisplay, completeBtn) {
-        // 1초마다 진행률 업데이트
         this.videoState.progressInterval = setInterval(() => {
-            if (this.videoState.isPaused) return; // 일시정지 상태면 진행하지 않음
+            if (this.videoState.isPaused) return;
 
             this.videoState.currentProgress += 1;
             const progressPercentage = (this.videoState.currentProgress / this.videoState.totalDuration) * 100;
 
-            // 진행 바 업데이트
-            progressFill.style.width = `${progressPercentage}%`;
-            timeDisplay.textContent = `${this.videoState.currentProgress}:00 / ${this.videoState.totalDuration}:00`;
+            if (progressFill) progressFill.style.width = `${progressPercentage}%`;
+            if (timeDisplay) timeDisplay.textContent = `${this.videoState.currentProgress}:00 / ${this.videoState.totalDuration}:00`;
 
-            // 영상 완료 시 처리
             if (this.videoState.currentProgress >= this.videoState.totalDuration) {
                 clearInterval(this.videoState.progressInterval);
                 this.videoState.isPlaying = false;
-                this.showVideoCompleteButton(completeBtn);
+                userSession.videoCompleted = true;
+                if (completeBtn) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.scrollIntoView({ behavior: 'smooth' });
+                }
             }
         }, 1000);
     },
 
-    // YouTube 플레이어 초기화 및 추적
-    initYouTubePlayer(videoId) {
-        console.log('🎬 YouTube 플레이어 초기화 시작:', videoId);
+    restartVideo() {
+        console.log('영상 재시작');
+        if (this.videoState.progressInterval) {
+            clearInterval(this.videoState.progressInterval);
+        }
+        
+        this.videoState.currentProgress = 0;
+        this.videoState.pausedAt = 0;
+        this.videoState.isPlaying = false;
+        this.videoState.isPaused = false;
+        userSession.videoCompleted = false;
 
-        // 로딩 오버레이 숨기기 (3초 후)
-        setTimeout(() => {
-            const loadingOverlay = document.getElementById('video-loading');
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-            }
-        }, 3000);
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
 
-        // YouTube API 스크립트 로드
-        if (!window.YT) {
-            console.log('📡 YouTube API 스크립트 로드 중...');
-            const tag = document.createElement('script');
-            tag.src = 'https://www.youtube.com/iframe_api';
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        if (progressFill) progressFill.style.width = '0%';
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 10:00';
+        if (completeBtn) completeBtn.style.display = 'none';
 
-            // API 로드 완료 후 플레이어 초기화
-            window.onYouTubeIframeAPIReady = () => {
-                console.log('✅ YouTube API 로드 완료');
-                this.createYouTubePlayer(videoId);
-            };
-        } else {
-            console.log('♻️ YouTube API 이미 로드됨');
-            this.createYouTubePlayer(videoId);
+        this.setupVideoPlayer();
+    },
+
+    pauseVideo() {
+        console.log('영상 일시정지');
+        if (!this.videoState.isPlaying || this.videoState.isPaused) return;
+
+        this.videoState.isPaused = true;
+        this.videoState.pausedAt = this.videoState.currentProgress;
+
+        const pauseBtn = document.getElementById('video-pause-btn');
+        const resumeBtn = document.getElementById('video-resume-btn');
+        
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        if (resumeBtn) resumeBtn.style.display = 'inline-block';
+    },
+
+    resumeVideo() {
+        console.log('영상 재생 재개');
+        if (!this.videoState.isPaused) return;
+
+        this.videoState.isPaused = false;
+        this.startVideoSimulation();
+
+        const pauseBtn = document.getElementById('video-pause-btn');
+        const resumeBtn = document.getElementById('video-resume-btn');
+        
+        if (pauseBtn) pauseBtn.style.display = 'inline-block';
+        if (resumeBtn) resumeBtn.style.display = 'none';
+    }
+};
+
+console.log('영상 관리자 로드 완료:', new Date().toLocaleTimeString());
+
+// ========================================
+// 🚀 앱 초기화
+// ========================================
+const App = {
+    init() {
+        console.log('앱 초기화 시작:', new Date().toLocaleTimeString());
+        
+        try {
+            // 로딩 화면 즉시 숨기기
+            this.hideLoading();
+            
+            // 이벤트 리스너 설정
+            this.setupEventListeners();
+            
+            // 첫 화면 표시
+            ScreenManager.showScreen('user-info');
+            
+            console.log('앱 초기화 완료:', new Date().toLocaleTimeString());
+        } catch (error) {
+            console.error('앱 초기화 중 오류 발생:', error);
+            // 오류가 발생해도 기본 화면은 표시
+            this.hideLoading();
+            ScreenManager.showScreen('user-info');
         }
     },
 
-    // YouTube 플레이어 생성
-    createYouTubePlayer(videoId) {
-        console.log('🎮 YouTube 플레이어 생성 중:', videoId);
+    hideLoading() {
+        // 여러 가능한 ID들을 시도
+        const possibleIds = ['loading', 'loader', 'loading-screen', 'preloader'];
+        let loadingElement = null;
+        
+        for (const id of possibleIds) {
+            loadingElement = document.getElementById(id);
+            if (loadingElement) break;
+        }
+        
+        // 또는 클래스명으로도 시도
+        if (!loadingElement) {
+            loadingElement = document.querySelector('.loading, .loader, .loading-screen');
+        }
+        
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+            document.body.classList.add('loaded');
+            console.log('로딩 화면이 성공적으로 숨겨졌습니다.');
+        } else {
+            console.error('로딩 화면 요소를 찾을 수 없습니다.');
+            // 로딩 요소를 찾지 못해도 앱은 계속 진행
+        }
+    },
 
-        try {
-            this.youtubePlayer = new YT.Player('safety-video', {
-                videoId: videoId,
-                playerVars: {
-                    'enablejsapi': 1,
-                    'rel': 0,
-                    'modestbranding': 1,
-                    'origin': window.location.origin
-                },
-                events: {
-                    'onReady': (event) => this.onYouTubePlayerReady(event),
-                    'onStateChange': (event) => this.onYouTubePlayerStateChange(event),
-                    'onError': (event) => this.onYouTubePlayerError(event)
+    setupEventListeners() {
+        console.log('이벤트 리스너 설정 시작');
+        
+        // 1단계: 사용자 정보 입력
+        const userInfoForm = document.getElementById('user-info-form');
+        if (userInfoForm) {
+            userInfoForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const name = document.getElementById('user-name').value.trim();
+                const zodiac = document.getElementById('user-zodiac').value;
+
+                // 유효성 검사
+                let isValid = true;
+                if (!Utils.validateName(name)) {
+                    Utils.showError('name-error', '이름을 입력해주세요.');
+                    isValid = false;
+                } else {
+                    Utils.clearError('name-error');
+                }
+
+                if (!Utils.validateZodiac(zodiac)) {
+                    Utils.showError('zodiac-error', '띠를 선택해주세요.');
+                    isValid = false;
+                } else {
+                    Utils.clearError('zodiac-error');
+                }
+
+                if (isValid) {
+                    userSession.name = name;
+                    userSession.zodiac = zodiac;
+                    
+                    // 교육 시작 API 호출
+                    try {
+                        const startResponse = await Utils.fetchWithTimeout('/.netlify/functions/start-education', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                name: userSession.name,
+                                zodiac: userSession.zodiac
+                            })
+                        });
+                        
+                        const startResult = await startResponse.json();
+                        
+                        if (startResult.success && startResult.data?.rowNumber) {
+                            userSession.rowNumber = startResult.data.rowNumber;
+                            console.log('교육 시작됨, 행 번호:', userSession.rowNumber);
+                        } else {
+                            console.warn('교육 시작 API 응답 이상:', startResult);
+                        }
+                    } catch (error) {
+                        console.error('교육 시작 API 호출 실패:', error);
+                        // 오류가 발생해도 계속 진행
+                    }
+                    
+                    await this.setupFortuneScreen();
+                    ScreenManager.showScreen('fortune');
                 }
             });
-        } catch (error) {
-            console.error('❌ YouTube 플레이어 생성 실패:', error);
-            this.showVideoError('YouTube 플레이어를 생성할 수 없습니다.');
-        }
-    },
-
-    // YouTube 플레이어 준비 완료
-    onYouTubePlayerReady(event) {
-        console.log('✅ YouTube 플레이어 준비 완료');
-
-        // 로딩 오버레이 숨기기
-        const loadingOverlay = document.getElementById('video-loading');
-        if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
         }
 
-        this.startYouTubeTracking();
-    },
-
-    // YouTube 플레이어 오류 처리
-    onYouTubePlayerError(event) {
-        console.error('❌ YouTube 플레이어 오류:', event.data);
-
-        let errorMessage = 'YouTube 영상을 로드할 수 없습니다.';
-
-        switch (event.data) {
-            case 2:
-                errorMessage = '잘못된 영상 ID입니다.';
-                break;
-            case 5:
-                errorMessage = 'HTML5 플레이어 오류가 발생했습니다.';
-                break;
-            case 100:
-                errorMessage = '영상을 찾을 수 없습니다.';
-                break;
-            case 101:
-            case 150:
-                errorMessage = '영상 소유자가 임베드를 허용하지 않습니다.';
-                break;
-        }
-
-        this.showVideoError(errorMessage);
-    },
-
-    // 영상 오류 표시
-    showVideoError(message) {
-        const videoPlayer = document.getElementById('video-player');
-        videoPlayer.innerHTML = `
-            <div style="text-align: center; padding: 40px; background: #fee; border: 2px solid #fcc; border-radius: 10px; color: #c33;">
-                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                <h3 style="margin-bottom: 10px; color: #c33;">영상 로딩 오류</h3>
-                <p style="margin-bottom: 20px;">${message}</p>
-                <div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="font-size: 14px; color: #666; margin: 0;">
-                        <strong>해결 방법:</strong><br>
-                        1. 영상 ID가 올바른지 확인<br>
-                        2. 영상이 공개 상태인지 확인<br>
-                        3. 임베드 허용 설정 확인<br>
-                        4. 페이지 새로고침 후 재시도
-                    </p>
-                </div>
-                <button onclick="location.reload()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    페이지 새로고침
-                </button>
-            </div>
-        `;
-    },
-
-    // YouTube 플레이어 상태 변경
-    onYouTubePlayerStateChange(event) {
-        const progressFill = document.getElementById('video-progress-fill');
-        const timeDisplay = document.getElementById('video-time-display');
-        const completeBtn = document.getElementById('video-complete-btn');
-
-        if (event.data === YT.PlayerState.ENDED) {
-            // 영상 완료 시
-            this.videoState.isPlaying = false;
-            progressFill.style.width = '100%';
-            this.showVideoCompleteButton(completeBtn);
-
-            if (this.videoState.progressInterval) {
-                clearInterval(this.videoState.progressInterval);
+        // 2단계: 운세 화면
+        setTimeout(() => {
+            const startBtn = document.getElementById('start-education-btn');
+            if (startBtn) {
+                startBtn.addEventListener('click', () => {
+                    VideoManager.setupVideoPlayer();
+                    ScreenManager.showScreen('video');
+                });
             }
-        } else if (event.data === YT.PlayerState.PLAYING) {
-            // 재생 시작/재개 시
-            this.videoState.isPlaying = true;
-            this.videoState.isPaused = false;
-        } else if (event.data === YT.PlayerState.PAUSED) {
-            // 일시정지 시
-            this.videoState.isPaused = true;
-        }
-    },
+        }, 100);
 
-    // YouTube 영상 진행률 추적 시작
-    startYouTubeTracking() {
-        const progressFill = document.getElementById('video-progress-fill');
-        const timeDisplay = document.getElementById('video-time-display');
-        const completeBtn = document.getElementById('video-complete-btn');
-
-        // 1초마다 진행률 업데이트
-        this.videoState.progressInterval = setInterval(() => {
-            if (this.youtubePlayer && this.youtubePlayer.getCurrentTime) {
-                const currentTime = this.youtubePlayer.getCurrentTime();
-                const duration = this.youtubePlayer.getDuration();
-
-                if (duration > 0) {
-                    const progressPercentage = (currentTime / duration) * 100;
-
-                    // 진행 바 업데이트
-                    progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
-
-                    // 시간 표시 업데이트
-                    const currentMinutes = Math.floor(currentTime / 60);
-                    const currentSeconds = Math.floor(currentTime % 60);
-                    const totalMinutes = Math.floor(duration / 60);
-                    const totalSecondsDisplay = Math.floor(duration % 60);
-
-                    timeDisplay.textContent =
-                        `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSecondsDisplay.toString().padStart(2, '0')}`;
-
-                    // 영상 완료 시 처리 (90% 시청 시 완료로 간주)
-                    if (progressPercentage >= 90) {
-                        clearInterval(this.videoState.progressInterval);
-                        this.showVideoCompleteButton(completeBtn);
+        // 3단계: 영상 완료
+        setTimeout(() => {
+            const completeBtn = document.getElementById('video-complete-btn');
+            if (completeBtn) {
+                completeBtn.addEventListener('click', async () => {
+                    if (userSession.videoCompleted) {
+                        // Quiz Score 카운터 증가 (시청 완료 버튼 클릭 횟수)
+                        userSession.quizScore++;
+                        console.log('시청 완료 버튼 클릭 횟수:', userSession.quizScore);
+                        
+                        await this.setupAssessmentScreen();
+                        ScreenManager.showScreen('assessment');
                     }
-                }
+                });
             }
-        }, 1000);
-    },% `;
-            
-            // 시간 표시 업데이트
-            const currentMinutes = Math.floor(currentTime / 60);
-            const currentSeconds = currentTime % 60;
-            const totalMinutes = Math.floor(videoDurationSeconds / 60);
-            const totalSeconds = videoDurationSeconds % 60;
-            
-            timeDisplay.textContent = 
-                `${ currentMinutes }: ${ currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
+        }, 100);
 
-// 영상 완료 시 처리 (90% 시청 시 완료로 간주)
-if (currentTime >= videoDurationSeconds * 0.9) {
-    clearInterval(this.videoState.progressInterval);
-    this.showVideoCompleteButton(completeBtn);
-}
-        }, 1000);
+        // 4단계: 퀴즈 제출
+        setTimeout(() => {
+            const assessmentForm = document.getElementById('assessment-form');
+            if (assessmentForm) {
+                assessmentForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleQuizSubmit();
+                });
+            }
+        }, 100);
+
+        console.log('이벤트 리스너 설정 완료');
     },
 
-// 영상 완료 버튼 표시 (별도 함수로 분리)
-showVideoCompleteButton(completeBtn) {
-    completeBtn.style.display = 'block';
-    completeBtn.scrollIntoView({ behavior: 'smooth' });
-},
-
-    // 평가 화면 초기화 (동적 퀴즈 생성)
-    async initAssessmentScreen() {
-    try {
-        // 백엔드에서 퀴즈 데이터 로드
-        const quizData = await ApiUtils.getQuizData();
-        userSession.quizData = quizData;
-
-        // 퀴즈 문제 동적 생성
-        this.generateQuizQuestions(quizData);
-
-        const assessmentForm = document.getElementById('assessment-form');
-        const submitButton = assessmentForm.querySelector('button[type="submit"]');
-
-        // 기존 답변이 있다면 복원
-        this.restoreQuizAnswers();
-
-        // 이벤트 리스너 설정
-        this.setupQuizEventListeners(assessmentForm, submitButton);
-
-        // 초기 상태 업데이트
-        this.updateAssessmentButton(assessmentForm, submitButton);
-        this.updateAllOptionStyles();
-    } catch (error) {
-        console.error('퀴즈 데이터 로드 실패:', error);
-        // 기본 퀴즈 데이터로 폴백
-        userSession.quizData = QUIZ_DATA.questions;
-        this.generateQuizQuestions(QUIZ_DATA.questions);
-    }
-},
-
-// 퀴즈 문제 동적 생성 (데이터 구조 사용)
-generateQuizQuestions(quizData = QUIZ_DATA.questions) {
-    const questionsContainer = document.getElementById('quiz-questions-container');
-    questionsContainer.innerHTML = ''; // 기존 내용 초기화
-
-    quizData.forEach((questionData, index) => {
-        const questionNumber = index + 1;
-        const questionElement = this.createQuestionElement(questionData, questionNumber);
-        questionsContainer.appendChild(questionElement);
-    });
-},
-
-// 개별 문제 요소 생성 (별도 함수로 분리)
-createQuestionElement(questionData, questionNumber) {
-    const questionContainer = document.createElement('div');
-    questionContainer.className = 'question-container';
-
-    // 문제 제목
-    const questionTitle = document.createElement('h3');
-    questionTitle.textContent = `문제 ${questionNumber}. ${questionData.question}`;
-    questionContainer.appendChild(questionTitle);
-
-    // 선택지 컨테이너
-    const optionsContainer = document.createElement('div');
-    optionsContainer.className = 'options';
-
-    // 각 선택지 생성
-    questionData.options.forEach((optionText, optionIndex) => {
-        const optionValue = optionIndex + 1;
-        const optionElement = this.createOptionElement(questionNumber, optionValue, optionText);
-        optionsContainer.appendChild(optionElement);
-    });
-
-    questionContainer.appendChild(optionsContainer);
-    return questionContainer;
-},
-
-// 개별 선택지 요소 생성 (별도 함수로 분리)
-createOptionElement(questionNumber, optionValue, optionText) {
-    const optionLabel = document.createElement('label');
-    optionLabel.className = 'option';
-
-    const radioInput = document.createElement('input');
-    radioInput.type = 'radio';
-    radioInput.name = `question${questionNumber}`;
-    radioInput.value = optionValue;
-
-    const optionSpan = document.createElement('span');
-    optionSpan.textContent = optionText;
-
-    optionLabel.appendChild(radioInput);
-    optionLabel.appendChild(optionSpan);
-
-    return optionLabel;
-},
-
-// 퀴즈 이벤트 리스너 설정 (별도 함수로 분리)
-setupQuizEventListeners(formElement, submitButton) {
-    const radioButtons = formElement.querySelectorAll('input[type="radio"]');
-
-    // 라디오 버튼 변경 이벤트
-    radioButtons.forEach(radioButton => {
-        radioButton.addEventListener('change', () => {
-            this.updateAssessmentButton(formElement, submitButton);
-            this.updateOptionStyles(radioButton);
-        });
-    });
-
-    // 폼 제출 이벤트
-    formElement.addEventListener('submit', (event) => {
-        event.preventDefault();
-        this.handleQuizSubmission(formElement);
-    });
-},
-
-// 퀴즈 제출 처리 (별도 함수로 분리)
-handleQuizSubmission(formElement) {
-    const formData = new FormData(formElement);
-
-    // 답변을 배열 형태로 저장 (백엔드 형식에 맞춤)
-    userSession.quizAnswers = [];
-    userSession.quizData.forEach((_, index) => {
-        const questionNumber = index + 1;
-        const answerValue = parseInt(formData.get(`question${questionNumber}`)) - 1; // 0-based index로 변환
-        userSession.quizAnswers.push(answerValue);
-    });
-
-    // 세션 저장
-    SessionUtils.saveSession();
-
-    // 완료 화면으로 이동
-    this.showScreen('completion');
-},
-
-// 퀴즈 답변 복원
-restoreQuizAnswers() {
-    userSession.quizAnswers.forEach((answerIndex, questionIndex) => {
-        if (answerIndex !== undefined && answerIndex !== null) {
-            const questionNumber = questionIndex + 1;
-            const answerValue = answerIndex + 1; // 1-based index로 변환
-            const radio = document.querySelector(`input[name="question${questionNumber}"][value="${answerValue}"]`);
-            if (radio) radio.checked = true;
+    async setupFortuneScreen() {
+        console.log('운세 화면 설정');
+        
+        // 띠 표시
+        const zodiacDisplay = document.getElementById('user-zodiac-display');
+        if (zodiacDisplay) {
+            zodiacDisplay.textContent = userSession.zodiac;
         }
-    });
-},
-
-// 모든 옵션 스타일 업데이트
-updateAllOptionStyles() {
-    const checkedRadios = document.querySelectorAll('input[type="radio"]:checked');
-    checkedRadios.forEach(radio => {
-        this.updateOptionStyles(radio);
-    });
-},
-
-// 평가 버튼 상태 업데이트
-updateAssessmentButton(form, submitBtn) {
-    const totalQuestions = userSession.quizData.length || 2;
-    let answeredCount = 0;
-
-    for (let i = 1; i <= totalQuestions; i++) {
-        const checkedAnswer = form.querySelector(`input[name="question${i}"]:checked`);
-        if (checkedAnswer) {
-            answeredCount++;
-        }
-    }
-
-    if (answeredCount === totalQuestions) {
-        submitBtn.disabled = false;
-    } else {
-        submitBtn.disabled = true;
-    }
-},
-
-// 선택된 옵션 스타일 업데이트
-updateOptionStyles(selectedRadio) {
-    const questionContainer = selectedRadio.closest('.question-container');
-    const options = questionContainer.querySelectorAll('.option');
-
-    options.forEach(option => {
-        option.classList.remove('selected');
-    });
-
-    selectedRadio.closest('.option').classList.add('selected');
-},
-
-// 완료 화면 초기화
-initCompletionScreen() {
-    const modifyBtn = document.getElementById('modify-answers-btn');
-    const proceedBtn = document.getElementById('proceed-to-final-btn');
-    const employeeSection = document.getElementById('employee-id-section');
-    const employeeInput = document.getElementById('employee-id');
-    const finalSubmitBtn = document.getElementById('final-submit-btn');
-
-    // 답변 정보 표시
-    this.displayAnswerSummary();
-
-    // 답변 수정 버튼 이벤트
-    modifyBtn.addEventListener('click', () => {
-        this.showScreen('assessment');
-    });
-
-    // 최종 제출하기 버튼 이벤트
-    proceedBtn.addEventListener('click', () => {
-        document.querySelector('.answer-review-section').style.display = 'none';
-        employeeSection.style.display = 'block';
-        employeeSection.scrollIntoView({ behavior: 'smooth' });
-    });
-
-    // 사번 입력 유효성 검사
-    employeeInput.addEventListener('input', () => {
-        this.validateEmployeeId(employeeInput, finalSubmitBtn);
-    });
-
-    // 최종 제출 버튼 이벤트
-    finalSubmitBtn.addEventListener('click', async () => {
-        await this.handleFinalSubmit();
-    });
-},
-
-// 답변 요약 정보 표시 (해시태그 중심)
-displayAnswerSummary() {
-    // 해시태그 생성 및 표시
-    this.generateAndDisplayHashtags();
-
-    // 퀴즈 답변 표시
-    this.displayQuizAnswers();
-},
-
-// 해시태그 생성 및 표시
-generateAndDisplayHashtags() {
-    const fortuneHashtagsElement = document.getElementById('review-fortune-hashtags');
-    const safetyHashtagsElement = document.getElementById('review-safety-hashtags');
-
-    if (fortuneHashtagsElement && safetyHashtagsElement) {
-        // 행운 해시태그 생성 (띠 기반)
-        const fortuneHashtags = HashtagUtils.generateFortuneHashtags(userSession.zodiac);
-        const fortuneHashtagString = HashtagUtils.hashtagsToString(fortuneHashtags);
-
-        // 안전 해시태그 생성 (무작위 4개)
-        const safetyHashtags = HashtagUtils.generateSafetyHashtags();
-        const safetyHashtagString = HashtagUtils.hashtagsToString(safetyHashtags);
-
-        // 타이핑 효과로 해시태그 표시
-        this.typeHashtagsWithEffect(fortuneHashtagsElement, fortuneHashtagString, 'fortune');
-
-        // 행운 해시태그 완료 후 안전 해시태그 표시
-        setTimeout(() => {
-            this.typeHashtagsWithEffect(safetyHashtagsElement, safetyHashtagString, 'safety');
-        }, fortuneHashtagString.length * 30 + 500);
-    }
-},
-
-// 해시태그 타이핑 효과 (스타일 포함)
-typeHashtagsWithEffect(element, text, type) {
-    element.textContent = '';
-    element.classList.add(type); // fortune 또는 safety 클래스 추가
-
-    let index = 0;
-    const typeInterval = setInterval(() => {
-        if (index < text.length) {
-            element.textContent += text.charAt(index);
-            index++;
-        } else {
-            clearInterval(typeInterval);
-            // 타이핑 완료 후 반짝임 효과
-            element.style.transform = 'scale(1.02)';
-            setTimeout(() => {
-                element.style.transform = 'scale(1)';
-            }, 200);
-        }
-    }, 30);
-},
-
-// 퀴즈 답변 표시 (별도 함수로 분리, 데이터 구조 사용)
-displayQuizAnswers() {
-    QUIZ_DATA.questions.forEach((questionData, index) => {
-        const questionNumber = index + 1;
-        const userAnswer = userSession.quizAnswers[`question${questionNumber}`];
-
-        if (userAnswer) {
-            const answerNumberElement = document.getElementById(`answer${questionNumber}-number`);
-            const answerTextElement = document.getElementById(`answer${questionNumber}-text`);
-
-            if (answerNumberElement && answerTextElement) {
-                answerNumberElement.textContent = userAnswer;
-                answerTextElement.textContent = questionData.options[parseInt(userAnswer) - 1];
+        
+        // AI 운세 생성 API 호출
+        const fortuneText = document.getElementById('fortune-text');
+        if (fortuneText) {
+            fortuneText.textContent = '맞춤형 운세를 생성하고 있습니다...';
+            
+            try {
+                const response = await Utils.fetchWithTimeout('/.netlify/functions/generate-fortune', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: userSession.name,
+                        zodiac: userSession.zodiac
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.fortune) {
+                    fortuneText.textContent = result.fortune;
+                } else {
+                    // Fallback to default fortune
+                    const defaultFortune = FORTUNE_DATA[userSession.zodiac] || '좋은 일이 생길 것입니다.';
+                    fortuneText.textContent = defaultFortune;
+                }
+            } catch (error) {
+                console.error('운세 생성 API 호출 실패:', error);
+                // Fallback to default fortune
+                const defaultFortune = FORTUNE_DATA[userSession.zodiac] || '좋은 일이 생길 것입니다.';
+                fortuneText.textContent = defaultFortune;
             }
         }
-    });
-},
+        
+        // 로또 번호 생성
+        const lotteryNumbers = Utils.generateLotteryNumbers();
+        const lotteryContainer = document.getElementById('lottery-numbers');
+        if (lotteryContainer) {
+            lotteryContainer.innerHTML = lotteryNumbers.map(num => 
+                `<div class="lottery-number">${num}</div>`
+            ).join('');
+        }
+    },
 
-
-
-// 사번 유효성 검사 (유틸리티 함수 사용)
-validateEmployeeId(inputElement, submitButton) {
-    const employeeIdValue = inputElement.value;
-    const isValidEmployeeId = ValidationUtils.validateEmployeeId(employeeIdValue);
-
-    if (employeeIdValue && !isValidEmployeeId) {
-        this.showFieldError('employee-id-error', ERROR_MESSAGES.employeeIdInvalid);
-        submitButton.disabled = true;
-    } else if (isValidEmployeeId) {
-        this.clearFieldError('employee-id-error');
-        submitButton.disabled = false;
-    } else {
-        this.clearFieldError('employee-id-error');
-        submitButton.disabled = true;
-    }
-},
-
-    // 행운 버튼 클릭 처리 (최종 제출 + 행운 이벤트)
-    async handleFinalSubmit() {
-    const luckyButton = document.getElementById('final-submit-btn');
-
-    try {
-        // 제출 데이터 준비
-        this.prepareFinalSubmissionData();
-
-        // 당첨자 수 확인
-        const winnerStatus = await ApiUtils.checkWinners();
-
-        // 행운 이벤트 처리 (당첨자 수 제한 고려)
-        this.processLuckyEvent(winnerStatus.canWin);
-
-        // 행운 버튼 로딩 상태 표시 (특별한 메시지)
-        this.showLuckyButtonLoading(luckyButton);
-
-        // 최종 데이터 제출 (백엔드 형식에 맞춤)
-        const submitData = {
-            name: userSession.name,
-            zodiac: userSession.zodiac,
-            employeeId: userSession.employeeId,
-            quizAnswers: userSession.quizAnswers,
-            rowNumber: userSession.rowNumber,
-            isWinner: userSession.isWinner
-        };
-
-        const result = await ApiUtils.submitFinalData(submitData);
-
-        // 로딩 상태 해제
-        LoadingUtils.hideButtonLoading(luckyButton);
-
-        if (result.success) {
-            // 행운 결과 팝업 표시
-            this.showLuckyResultPopup();
-
-            // 세션 정리
-            SessionUtils.clearSession();
-        } else {
-            throw new Error(result.message || '제출 실패');
+    async setupAssessmentScreen() {
+        console.log('평가 화면 설정');
+        
+        try {
+            // 백엔드에서 퀴즈 데이터 가져오기
+            const response = await Utils.fetchWithTimeout('/.netlify/functions/get-quiz', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                userSession.quizData = result.data;
+            } else {
+                // Fallback to default quiz data
+                userSession.quizData = [
+                    {
+                        id: 1,
+                        question: '전기 작업 시 가장 중요한 안전 수칙은 무엇입니까?',
+                        options: ['작업 전 전원 차단 확인', '작업복 착용', '도구 점검', '작업 시간 단축'],
+                        correctAnswer: 1
+                    },
+                    {
+                        id: 2,
+                        question: '전기 화재 발생 시 올바른 대처 방법은?',
+                        options: ['물로 진화', '전원 차단 후 소화기 사용', '모래로 덮기', '바람으로 끄기'],
+                        correctAnswer: 2
+                    }
+                ];
+            }
+        } catch (error) {
+            console.error('퀴즈 데이터 로드 실패:', error);
+            // Fallback to default quiz data
+            userSession.quizData = [
+                {
+                    id: 1,
+                    question: '전기 작업 시 가장 중요한 안전 수칙은 무엇입니까?',
+                    options: ['작업 전 전원 차단 확인', '작업복 착용', '도구 점검', '작업 시간 단축'],
+                    correctAnswer: 1
+                },
+                {
+                    id: 2,
+                    question: '전기 화재 발생 시 올바른 대처 방법은?',
+                    options: ['물로 진화', '전원 차단 후 소화기 사용', '모래로 덮기', '바람으로 끄기'],
+                    correctAnswer: 2
+                }
+            ];
         }
 
-    } catch (error) {
-        // 오류 처리
-        LoadingUtils.hideButtonLoading(luckyButton);
-        this.showError(error.message || ERROR_MESSAGES.submitError);
-    }
-},
+        this.renderQuiz();
+    },
 
-// 행운 버튼 로딩 상태 표시 (특별한 메시지)
-showLuckyButtonLoading(buttonElement) {
-    buttonElement.classList.add('loading');
-    buttonElement.disabled = true;
-    buttonElement.innerHTML = '🍀 행운을 확인하는 중...';
-},
+    renderQuiz() {
+        const container = document.getElementById('quiz-questions-container');
+        if (!container) return;
 
-// 최종 제출 데이터 준비 (별도 함수로 분리)
-prepareFinalSubmissionData() {
-    const employeeIdInput = document.getElementById('employee-id');
-    userSession.employeeId = employeeIdInput.value;
-    userSession.completionTime = new Date().toISOString();
-},
+        container.innerHTML = '';
 
-// 행운 이벤트 처리 (별도 함수로 분리)
-processLuckyEvent(canWin = true) {
-    if (!canWin) {
-        userSession.isWinner = false;
-        return;
-    }
-
-    const randomValue = Math.random();
-    userSession.isWinner = randomValue < CONFIG.WIN_PROBABILITY;
-},
-
-// 행운 결과 팝업 표시 (프로그램 종료 기능 포함)
-showLuckyResultPopup() {
-    if (userSession.isWinner) {
-        this.showFinalModal(
-            '🎉 대박! 당첨되셨습니다!',
-            `축하합니다! ${userSession.name}님께서 행운의 당첨자로 선정되셨습니다!\n\n전기설비 안전교육도 성공적으로 완료하셨습니다.\n정말 수고 많으셨습니다! 🎊`
-        );
-    } else {
-        this.showFinalModal(
-            '😊 교육 완료!',
-            `${userSession.name}님, 전기설비 안전교육을 성공적으로 완료하셨습니다!\n\n아쉽게도 이번엔 당첨되지 않으셨지만,\n안전한 작업을 위한 소중한 지식을 얻으셨습니다.\n\n정말 수고 많으셨습니다! 👏`
-        );
-    }
-},
-
-// 최종 완료 모달 (창 닫기 기능 포함)
-showFinalModal(title, message) {
-    const overlay = document.getElementById('modal-overlay');
-    const titleElement = document.getElementById('modal-title');
-    const messageElement = document.getElementById('modal-message');
-    const closeBtn = document.getElementById('modal-close-btn');
-
-    titleElement.textContent = title;
-    messageElement.textContent = message;
-
-    // 버튼 텍스트를 "창 닫기"로 변경
-    closeBtn.textContent = '창 닫기';
-    closeBtn.className = 'btn btn-close'; // 특별한 스타일 적용
-
-    overlay.classList.add('active');
-
-    // 최종 완료 모달 닫기 이벤트 (프로그램 종료)
-    const closeFinalModal = () => {
-        this.closeApplication();
-    };
-
-    const outsideClick = (event) => {
-        if (event.target === overlay) {
-            this.closeApplication();
-        }
-    };
-
-    // 이벤트 리스너 등록
-    closeBtn.addEventListener('click', closeFinalModal);
-    overlay.addEventListener('click', outsideClick);
-
-    // ESC 키로도 종료 가능
-    const handleEscKey = (event) => {
-        if (event.key === 'Escape') {
-            this.closeApplication();
-        }
-    };
-
-    document.addEventListener('keydown', handleEscKey);
-
-    // 정리 함수 저장 (나중에 사용)
-    this.finalModalCleanup = () => {
-        closeBtn.removeEventListener('click', closeFinalModal);
-        overlay.removeEventListener('click', outsideClick);
-        document.removeEventListener('keydown', handleEscKey);
-    };
-},
-
-// 애플리케이션 종료 처리
-closeApplication() {
-    // 모달 정리
-    if (this.finalModalCleanup) {
-        this.finalModalCleanup();
-    }
-
-    // 모달 숨기기
-    const overlay = document.getElementById('modal-overlay');
-    overlay.classList.remove('active');
-
-    // 감사 메시지와 함께 페이지 숨기기
-    this.showClosingMessage();
-
-    // 3초 후 창 닫기 시도 (브라우저 보안 정책에 따라 동작할 수 있음)
-    setTimeout(() => {
-        this.attemptWindowClose();
-    }, 3000);
-},
-
-// 종료 메시지 표시
-showClosingMessage() {
-    const appContainer = document.getElementById('app');
-    appContainer.innerHTML = `
-            <div style="text-align: center; padding: 50px; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);">
-                <h1 style="color: #667eea; margin-bottom: 20px;">🎓 교육 완료</h1>
-                <p style="font-size: 18px; line-height: 1.6; color: #333; margin-bottom: 30px;">
-                    전기설비 온라인 안전교육이 성공적으로 완료되었습니다.<br>
-                    안전한 작업을 위해 배운 내용을 잘 기억해 주세요.
-                </p>
-                <p style="font-size: 16px; color: #666; margin-bottom: 20px;">
-                    잠시 후 창이 자동으로 닫힙니다.
-                </p>
-                <div style="display: flex; justify-content: center; gap: 10px;">
-                    <div style="width: 10px; height: 10px; background: #667eea; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
-                    <div style="width: 10px; height: 10px; background: #667eea; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
-                    <div style="width: 10px; height: 10px; background: #667eea; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
+        userSession.quizData.forEach((question, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'quiz-question-card';
+            questionDiv.innerHTML = `
+                <div class="question-header">
+                    <div class="question-number">Q${index + 1}</div>
+                    <h3 class="question-title">${question.question}</h3>
                 </div>
-            </div>
-        `;
-
-    // 바운스 애니메이션 CSS 추가
-    const style = document.createElement('style');
-    style.textContent = `
-            @keyframes bounce {
-                0%, 80%, 100% {
-                    transform: scale(0);
-                }
-                40% {
-                    transform: scale(1.0);
-                }
-            }
-        `;
-    document.head.appendChild(style);
-},
-
-// 창 닫기 시도
-attemptWindowClose() {
-    try {
-        // 브라우저에서 창 닫기 시도
-        window.close();
-
-        // 창이 닫히지 않는 경우를 대비한 메시지
-        setTimeout(() => {
-            if (!window.closed) {
-                document.body.innerHTML = `
-                        <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <div style="text-align: center; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); max-width: 500px;">
-                                <h2 style="color: #667eea; margin-bottom: 20px;">✅ 교육 완료</h2>
-                                <p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;">
-                                    전기설비 온라인 안전교육이 완료되었습니다.<br>
-                                    이 창을 직접 닫아주세요.
-                                </p>
-                                <p style="font-size: 14px; color: #666;">
-                                    브라우저 탭을 닫거나 Alt+F4 (Windows) / Cmd+W (Mac)를 눌러주세요.
-                                </p>
+                <div class="quiz-options">
+                    ${question.options.map((option, optionIndex) => `
+                        <label class="quiz-option-card">
+                            <input type="radio" name="question-${question.id}" value="${optionIndex + 1}">
+                            <div class="option-content">
+                                <div class="option-number">${optionIndex + 1}</div>
+                                <div class="option-text">${option}</div>
+                                <div class="option-check">✓</div>
                             </div>
-                        </div>
-                    `;
-            }
-        }, 1000);
-    } catch (error) {
-        console.log('창 닫기 실패:', error);
-    }
-},
-
-// 필드 오류 표시
-showFieldError(errorId, message) {
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.textContent = message;
-    }
-},
-
-// 필드 오류 제거
-clearFieldError(errorId) {
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.textContent = '';
-    }
-},
-
-// 일반 오류 표시
-showError(message) {
-    this.showModal('오류', message);
-},
-
-// 일반 모달 표시 (기본 확인 버튼)
-showModal(title, message) {
-    const overlay = document.getElementById('modal-overlay');
-    const titleElement = document.getElementById('modal-title');
-    const messageElement = document.getElementById('modal-message');
-    const closeBtn = document.getElementById('modal-close-btn');
-
-    titleElement.textContent = title;
-    messageElement.textContent = message;
-
-    // 기본 버튼 스타일로 복원
-    closeBtn.textContent = '확인';
-    closeBtn.className = 'btn btn-primary';
-
-    overlay.classList.add('active');
-
-    // 모달 닫기 이벤트
-    const closeModal = () => {
-        overlay.classList.remove('active');
-        closeBtn.removeEventListener('click', closeModal);
-        overlay.removeEventListener('click', outsideClick);
-    };
-
-    const outsideClick = (event) => {
-        if (event.target === overlay) {
-            closeModal();
-        }
-    };
-
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', outsideClick);
-}
-};
-
-// ========================================
-// 🚀 애플리케이션 초기화
-// ========================================
-
-// 애플리케이션 초기화 관리자
-const AppInitializer = {
-    // 전체 초기화 프로세스
-    initialize() {
-        this.showDevelopmentMode();
-        this.hideLoadingScreen();
-        this.restoreUserSession();
-        this.initializeScreenManager();
-        this.setupErrorHandling();
-    },
-
-    // 개발 모드 표시
-    showDevelopmentMode() {
-        if (CONFIG.DEVELOPMENT_MODE) {
-            console.log('🔧 Safe Edu - 개발 모드로 실행 중');
-            console.log('📡 API 호출이 시뮬레이션으로 동작합니다');
-
-            // 개발 모드 표시 추가
-            const devIndicator = document.createElement('div');
-            devIndicator.innerHTML = '🔧 개발 모드';
-            devIndicator.style.cssText = `
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                background: #ff6b6b;
-                color: white;
-                padding: 5px 10px;
-                border-radius: 5px;
-                font-size: 12px;
-                z-index: 10000;
-                font-family: monospace;
+                        </label>
+                    `).join('')}
+                </div>
             `;
-            document.body.appendChild(devIndicator);
+            container.appendChild(questionDiv);
+        });
+
+        // 답변 변경 감지
+        container.addEventListener('change', () => {
+            this.checkQuizCompletion();
+            this.updateQuizProgress();
+        });
+    },
+
+    checkQuizCompletion() {
+        const totalQuestions = userSession.quizData.length;
+        const answeredQuestions = document.querySelectorAll('input[type="radio"]:checked').length;
+        const submitBtn = document.querySelector('#assessment-form button[type="submit"]');
+        
+        if (submitBtn) {
+            submitBtn.disabled = answeredQuestions !== totalQuestions;
+            
+            // 버튼 텍스트 업데이트
+            if (answeredQuestions === totalQuestions) {
+                submitBtn.innerHTML = `
+                    <span class="btn-icon">✅</span>
+                    답변 확인하러 가기
+                `;
+                submitBtn.classList.add('btn-ready');
+            } else {
+                submitBtn.innerHTML = `
+                    <span class="btn-icon">📝</span>
+                    모든 문제에 답변해주세요 (${answeredQuestions}/${totalQuestions})
+                `;
+                submitBtn.classList.remove('btn-ready');
+            }
         }
     },
 
-    // 로딩 화면 숨기기 (설정값 사용)
-    hideLoadingScreen() {
-        setTimeout(() => {
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
-            }
-        }, CONFIG.LOADING_DELAY);
+    updateQuizProgress() {
+        const totalQuestions = userSession.quizData.length;
+        const answeredQuestions = document.querySelectorAll('input[type="radio"]:checked').length;
+        const progressText = document.getElementById('quiz-progress');
+        const progressBar = document.getElementById('quiz-progress-bar');
+        
+        if (progressText) {
+            progressText.textContent = `${answeredQuestions}/${totalQuestions}`;
+        }
+        
+        if (progressBar) {
+            const percentage = (answeredQuestions / totalQuestions) * 100;
+            progressBar.style.width = `${percentage}%`;
+        }
     },
 
-    // 사용자 세션 복구 (유틸리티 함수 사용)
-    restoreUserSession() {
-        SessionUtils.restoreSession();
-    },
-
-    // 화면 관리자 초기화
-    initializeScreenManager() {
-        screenManager.initializeScreen('user-info');
-    },
-
-    // 전역 오류 처리 설정
-    setupErrorHandling() {
-        // 페이지 새로고침 방지 (교육 진행 중일 때)
-        window.addEventListener('beforeunload', (event) => {
-            if (userSession.name && !userSession.completionTime) {
-                event.preventDefault();
-                event.returnValue = '교육이 완료되지 않았습니다. 정말 나가시겠습니까?';
+    handleQuizSubmit() {
+        console.log('퀴즈 제출 처리');
+        
+        // 답변 수집
+        userSession.quizAnswers = [];
+        userSession.quizData.forEach(question => {
+            const selectedOption = document.querySelector(`input[name="question-${question.id}"]:checked`);
+            if (selectedOption) {
+                // 1-based에서 0-based로 변환 (백엔드에서 0-based index 사용)
+                userSession.quizAnswers.push(parseInt(selectedOption.value) - 1);
             }
         });
+
+        // 답변 완료 시 바로 완료 화면으로 이동
+        // (정답 확인은 백엔드에서 처리)
+        console.log('수집된 답변:', userSession.quizAnswers);
+        this.setupCompletionScreen();
+        ScreenManager.showScreen('completion');
+    },
+
+    setupCompletionScreen() {
+        console.log('완료 화면 설정');
+        
+        // 답변 요약 표시
+        userSession.quizData.forEach((question, index) => {
+            const answerNumber = userSession.quizAnswers[index];
+            const answerText = question.options[answerNumber - 1];
+            
+            const numberElement = document.getElementById(`answer${index + 1}-number`);
+            const textElement = document.getElementById(`answer${index + 1}-text`);
+            
+            if (numberElement) numberElement.textContent = `${answerNumber}.`;
+            if (textElement) textElement.textContent = answerText;
+        });
+
+        // 해시태그 생성 및 표시
+        const fortuneHashtags = FORTUNE_HASHTAGS[userSession.zodiac] || ['#행운', '#안전', '#성공'];
+        const fortuneHashtagsContainer = document.getElementById('review-fortune-hashtags');
+        if (fortuneHashtagsContainer) {
+            fortuneHashtagsContainer.innerHTML = fortuneHashtags.map(tag => 
+                `<span class="hashtag">${tag}</span>`
+            ).join(' ');
+        }
+
+        const safetyHashtags = SAFETY_HASHTAGS.slice(0, 4);
+        const safetyHashtagsContainer = document.getElementById('review-safety-hashtags');
+        if (safetyHashtagsContainer) {
+            safetyHashtagsContainer.innerHTML = safetyHashtags.map(tag => 
+                `<span class="hashtag">${tag}</span>`
+            ).join(' ');
+        }
+
+        // 완료 화면 이벤트 설정
+        setTimeout(() => {
+            const proceedBtn = document.getElementById('proceed-to-final-btn');
+            if (proceedBtn) {
+                proceedBtn.addEventListener('click', () => {
+                    this.showLuckyButton();
+                });
+            }
+        }, 100);
+    },
+
+    showLuckyButton() {
+        console.log('행운 버튼 표시');
+        
+        // 완료 요약 섹션 숨기기
+        const summarySection = document.querySelector('.completion-summary-section');
+        if (summarySection) {
+            summarySection.style.display = 'none';
+        }
+
+        // 행운 버튼 섹션 표시
+        const completionContent = document.querySelector('.completion-content');
+        if (completionContent) {
+            const luckySection = document.createElement('div');
+            luckySection.className = 'lucky-section';
+            luckySection.innerHTML = `
+                <h3>🍀 행운의 순간!</h3>
+                <p>교육을 완료하셨습니다. 행운 버튼을 눌러 이벤트에 참여해보세요!</p>
+                <button id="lucky-button" class="btn btn-lucky">🍀 행운 버튼</button>
+            `;
+            completionContent.appendChild(luckySection);
+
+            // 행운 버튼 이벤트
+            document.getElementById('lucky-button').addEventListener('click', () => {
+                this.handleLuckyButton();
+            });
+        }
+    },
+
+    async handleLuckyButton() {
+        console.log('행운 버튼 처리');
+        
+        try {
+            // 당첨자 수 확인 API 호출
+            const checkResponse = await Utils.fetchWithTimeout('/.netlify/functions/check-winners', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const checkResult = await checkResponse.json();
+            
+            if (!checkResult.success || !checkResult.data?.canWin) {
+                // 당첨자 한도 초과
+                userSession.isWinner = false;
+                const currentWinners = checkResult.data?.currentWinners || 0;
+                const maxWinners = checkResult.data?.maxWinners || 100;
+                this.showModal('😢 아쉽네요', `당첨자 한도가 초과되었습니다!\n현재 당첨자: ${currentWinners}/${maxWinners}\n아쉽지만 꽝입니다!`, () => {
+                    this.showEmployeeIdInput();
+                });
+                return;
+            }
+            
+            // 당첨 여부 결정
+            const isWinner = Math.random() < CONFIG.WIN_PROBABILITY;
+            userSession.isWinner = isWinner;
+
+            // 결과 표시
+            const title = isWinner ? '🎉 축하합니다!' : '😢 아쉽네요';
+            const message = isWinner ? '당첨되었습니다!' : '아쉽지만 꽝입니다!';
+            
+            this.showModal(title, message, () => {
+                this.showEmployeeIdInput();
+            });
+            
+        } catch (error) {
+            console.error('당첨자 확인 API 호출 실패:', error);
+            // 오류 시 기본 로직으로 진행
+            const isWinner = Math.random() < CONFIG.WIN_PROBABILITY;
+            userSession.isWinner = isWinner;
+            
+            const title = isWinner ? '🎉 축하합니다!' : '😢 아쉽네요';
+            const message = isWinner ? '당첨되었습니다!' : '아쉽지만 꽝입니다!';
+            
+            this.showModal(title, message, () => {
+                this.showEmployeeIdInput();
+            });
+        }
+    },
+
+    showEmployeeIdInput() {
+        console.log('사번 입력 화면 표시');
+        
+        // 기존 섹션들 숨기기
+        document.querySelectorAll('.completion-summary-section, .lucky-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // 사번 입력 섹션 표시
+        const employeeIdSection = document.getElementById('employee-id-section');
+        if (employeeIdSection) {
+            employeeIdSection.style.display = 'block';
+            
+            // 사번 입력 시 버튼 활성화
+            const employeeIdInput = document.getElementById('employee-id');
+            const finalBtn = document.getElementById('final-complete-btn');
+            
+            if (employeeIdInput && finalBtn) {
+                employeeIdInput.addEventListener('input', (e) => {
+                    finalBtn.disabled = !Utils.validateEmployeeId(e.target.value);
+                });
+                
+                finalBtn.addEventListener('click', () => {
+                    this.handleFinalSubmit();
+                });
+            }
+        }
+    },
+
+    async handleFinalSubmit() {
+        console.log('최종 제출 처리');
+        
+        const employeeId = document.getElementById('employee-id').value;
+        
+        if (!Utils.validateEmployeeId(employeeId)) {
+            Utils.showError('employee-id-error', '7자리 숫자를 입력해주세요.');
+            return;
+        }
+
+        userSession.employeeId = employeeId;
+        
+        // 버튼 로딩 상태로 변경
+        const finalBtn = document.getElementById('final-complete-btn');
+        if (finalBtn) {
+            finalBtn.disabled = true;
+            finalBtn.textContent = '제출 중...';
+            finalBtn.classList.add('loading');
+        }
+        
+        try {
+            // rowNumber 확인
+            if (!userSession.rowNumber) {
+                throw new Error('교육 시작 정보가 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+            }
+            
+            // Google Sheets에 전송할 데이터 준비
+            const submissionData = {
+                name: userSession.name,
+                zodiac: userSession.zodiac,
+                employeeId: userSession.employeeId,
+                quizAnswers: userSession.quizAnswers,
+                rowNumber: userSession.rowNumber,
+                isWinner: userSession.isWinner
+            };
+            
+            console.log('제출 데이터:', submissionData);
+            
+            // 백엔드로 데이터 전송
+            const response = await Utils.fetchWithTimeout('/.netlify/functions/complete-education', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(submissionData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 성공 처리
+                this.showModal('완료!', `교육이 성공적으로 완료되었습니다!\n\n시청 완료 횟수: ${userSession.quizScore}회\n사번: ${userSession.employeeId}\n\n데이터가 성공적으로 저장되었습니다.`, () => {
+                    // 페이지 닫기
+                    window.close();
+                    // 만약 window.close()가 작동하지 않으면 새로고침으로 초기화
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                });
+            } else {
+                // 실패 처리
+                this.showModal('오류 발생', `데이터 저장 중 오류가 발생했습니다.\n\n오류: ${result.error || '알 수 없는 오류'}\n\n다시 시도해주세요.`, () => {
+                    if (finalBtn) {
+                        finalBtn.disabled = false;
+                        finalBtn.textContent = '최종 완료';
+                        finalBtn.classList.remove('loading');
+                    }
+                });
+            }
+            
+        } catch (error) {
+            console.error('최종 제출 API 호출 실패:', error);
+            
+            // 오류 처리
+            this.showModal('네트워크 오류', `서버와의 통신 중 오류가 발생했습니다.\n\n네트워크 연결을 확인하고 다시 시도해주세요.`, () => {
+                if (finalBtn) {
+                    finalBtn.disabled = false;
+                    finalBtn.textContent = '최종 완료';
+                    finalBtn.classList.remove('loading');
+                }
+            });
+        }
+    },
+
+
+
+    showModal(title, message, onClose = null) {
+        const modal = document.getElementById('modal-overlay');
+        const titleElement = document.getElementById('modal-title');
+        const messageElement = document.getElementById('modal-message');
+        const closeBtn = document.getElementById('modal-close-btn');
+
+        if (titleElement) titleElement.textContent = title;
+        if (messageElement) {
+            // 줄바꿈 문자를 <br>로 변환
+            messageElement.innerHTML = message.replace(/\n/g, '<br>');
+        }
+        if (modal) modal.style.display = 'flex';
+
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (onClose) onClose();
+            };
+        }
     }
 };
 
-// 페이지 로드 시 초기화
-document.addEventListener('DOMContentLoaded', () => {
-    AppInitializer.initialize();
-});
+// ========================================
+// 🎬 페이지 로드 시 초기화
+// ========================================
+function initializeApp() {
+    console.log('DOM 로드 완료, 앱 초기화 시작:', new Date().toLocaleTimeString());
+    App.init();
+}
+
+// DOM 상태에 따른 초기화
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM이 이미 로드된 경우 즉시 실행
+    initializeApp();
+}
+
+console.log('Script 로드 완료:', new Date().toLocaleTimeString());
