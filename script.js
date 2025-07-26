@@ -4,7 +4,7 @@
 const CONFIG = {
     // API 관련 설정
     API_BASE_URL: '/api',
-    VIDEO_URL: 'HggDt3GUGYo', // YouTube 영상 ID (실제 영상으로 교체 필요)
+    VIDEO_URL: 'VxMnsSZJqUI', // YouTube 영상 ID (실제 영상으로 교체 필요)
 
     // 개발 모드 설정
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
