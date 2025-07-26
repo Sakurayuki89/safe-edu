@@ -692,54 +692,50 @@ const screenManager = {
 
     // 영상 플레이어 설정 (YouTube 영상 임베드)
     setupVideoPlayer(videoPlayer) {
-        // YouTube 영상 ID (환경에 따라 다른 영상 사용)
-        const videoId = CONFIG.DEVELOPMENT_MODE ?
-            'dQw4w9WgXcQ' : // 개발용 샘플 ID
-            CONFIG.VIDEO_URL || 'dQw4w9WgXcQ'; // 실제 영상 ID
+        // YouTube 영상 ID 사용 (개발/프로덕션 모드 모두 실제 영상 사용)
+        const videoId = CONFIG.VIDEO_URL || 'HggDt3GUGYo';
 
-        if (CONFIG.DEVELOPMENT_MODE) {
-            // 개발 모드: 시뮬레이션 버튼
-            videoPlayer.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
-                    <p style="font-size: 18px; margin-bottom: 10px;">🎬 전기설비 안전교육 영상</p>
-                    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
-                        개발 모드: 10초 시뮬레이션으로 진행됩니다
-                    </p>
-                    <button id="simulate-video" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
-                        📺 영상 시청 시작
-                    </button>
+        // 실제 YouTube 영상 임베드 (개발 모드에서도 실제 영상 표시)
+        videoPlayer.innerHTML = `
+            <div style="position: relative; width: 100%; height: 400px;">
+                <iframe 
+                    id="safety-video"
+                    src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&origin=${window.location.origin}" 
+                    width="100%" 
+                    height="100%" 
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    style="border-radius: 10px;">
+                </iframe>
+                <div id="video-loading" style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 10px;
+                    color: white;
+                    font-size: 16px;
+                ">
+                    <div style="text-align: center;">
+                        <div style="width: 40px; height: 40px; border: 3px solid #fff; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+                        YouTube 영상을 로딩 중입니다...
+                    </div>
                 </div>
-            `;
-        } else {
-            // 프로덕션 모드: 실제 YouTube 영상
-            videoPlayer.innerHTML = `
-                <div style="position: relative; width: 100%; height: 400px;">
-                    <iframe 
-                        id="safety-video"
-                        src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1" 
-                        width="100%" 
-                        height="100%" 
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen
-                        style="border-radius: 10px;">
-                    </iframe>
-                </div>
-            `;
+            </div>
+        `;
 
-            // YouTube API를 통한 영상 추적 시작
-            this.initYouTubePlayer(videoId);
-        }
+        // YouTube API를 통한 영상 추적 시작
+        this.initYouTubePlayer(videoId);
     },
 
     // 영상 이벤트 리스너 설정 (별도 함수로 분리)
     setupVideoEventListeners(progressFill, timeDisplay, completeBtn, restartBtn, pauseBtn, resumeBtn) {
-        // 영상 시작 버튼 이벤트
-        const simulateBtn = document.getElementById('simulate-video');
-        simulateBtn.addEventListener('click', () => {
-            this.startVideoPlayback(progressFill, timeDisplay, completeBtn);
-        });
-
         // 처음부터 다시보기 버튼 이벤트
         restartBtn.addEventListener('click', () => {
             this.restartVideo(progressFill, timeDisplay, completeBtn);
@@ -772,48 +768,21 @@ const screenManager = {
 
     // 영상 처음부터 다시보기
     restartVideo(progressFill, timeDisplay, completeBtn) {
-        if (CONFIG.DEVELOPMENT_MODE) {
-            // 개발 모드: 시뮬레이션 재시작
-            if (this.videoState.progressInterval) {
-                clearInterval(this.videoState.progressInterval);
-            }
-
-            this.videoState.currentProgress = 0;
-            this.videoState.isPlaying = false;
-            this.videoState.isPaused = false;
+        // YouTube 영상 재시작
+        if (this.youtubePlayer && this.youtubePlayer.seekTo) {
+            this.youtubePlayer.seekTo(0);
+            this.youtubePlayer.playVideo();
 
             progressFill.style.width = '0%';
-            timeDisplay.textContent = '00:00 / 10:00';
             completeBtn.style.display = 'none';
-
-            this.startVideoPlayback(progressFill, timeDisplay, completeBtn);
-        } else {
-            // 프로덕션 모드: YouTube 영상 재시작
-            if (this.youtubePlayer && this.youtubePlayer.seekTo) {
-                this.youtubePlayer.seekTo(0);
-                this.youtubePlayer.playVideo();
-
-                progressFill.style.width = '0%';
-                completeBtn.style.display = 'none';
-            }
         }
     },
 
     // 영상 일시정지
     pauseVideo(pauseBtn, resumeBtn) {
-        if (CONFIG.DEVELOPMENT_MODE) {
-            // 개발 모드: 시뮬레이션 일시정지
-            if (!this.videoState.isPlaying || this.videoState.isPaused) return;
-
-            this.videoState.isPaused = true;
-            if (this.videoState.progressInterval) {
-                clearInterval(this.videoState.progressInterval);
-            }
-        } else {
-            // 프로덕션 모드: YouTube 영상 일시정지
-            if (this.youtubePlayer && this.youtubePlayer.pauseVideo) {
-                this.youtubePlayer.pauseVideo();
-            }
+        // YouTube 영상 일시정지
+        if (this.youtubePlayer && this.youtubePlayer.pauseVideo) {
+            this.youtubePlayer.pauseVideo();
         }
 
         // 버튼 상태 변경
@@ -823,17 +792,9 @@ const screenManager = {
 
     // 영상 재생 재개
     resumeVideo(pauseBtn, resumeBtn, progressFill, timeDisplay, completeBtn) {
-        if (CONFIG.DEVELOPMENT_MODE) {
-            // 개발 모드: 시뮬레이션 재개
-            if (!this.videoState.isPaused) return;
-
-            this.videoState.isPaused = false;
-            this.simulateVideoProgress(progressFill, timeDisplay, completeBtn);
-        } else {
-            // 프로덕션 모드: YouTube 영상 재개
-            if (this.youtubePlayer && this.youtubePlayer.playVideo) {
-                this.youtubePlayer.playVideo();
-            }
+        // YouTube 영상 재개
+        if (this.youtubePlayer && this.youtubePlayer.playVideo) {
+            this.youtubePlayer.playVideo();
         }
 
         // 버튼 상태 변경
@@ -865,8 +826,19 @@ const screenManager = {
 
     // YouTube 플레이어 초기화 및 추적
     initYouTubePlayer(videoId) {
+        console.log('🎬 YouTube 플레이어 초기화 시작:', videoId);
+
+        // 로딩 오버레이 숨기기 (3초 후)
+        setTimeout(() => {
+            const loadingOverlay = document.getElementById('video-loading');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }, 3000);
+
         // YouTube API 스크립트 로드
         if (!window.YT) {
+            console.log('📡 YouTube API 스크립트 로드 중...');
             const tag = document.createElement('script');
             tag.src = 'https://www.youtube.com/iframe_api';
             const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -874,28 +846,100 @@ const screenManager = {
 
             // API 로드 완료 후 플레이어 초기화
             window.onYouTubeIframeAPIReady = () => {
+                console.log('✅ YouTube API 로드 완료');
                 this.createYouTubePlayer(videoId);
             };
         } else {
+            console.log('♻️ YouTube API 이미 로드됨');
             this.createYouTubePlayer(videoId);
         }
     },
 
     // YouTube 플레이어 생성
     createYouTubePlayer(videoId) {
-        this.youtubePlayer = new YT.Player('safety-video', {
-            videoId: videoId,
-            events: {
-                'onReady': (event) => this.onYouTubePlayerReady(event),
-                'onStateChange': (event) => this.onYouTubePlayerStateChange(event)
-            }
-        });
+        console.log('🎮 YouTube 플레이어 생성 중:', videoId);
+
+        try {
+            this.youtubePlayer = new YT.Player('safety-video', {
+                videoId: videoId,
+                playerVars: {
+                    'enablejsapi': 1,
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'origin': window.location.origin
+                },
+                events: {
+                    'onReady': (event) => this.onYouTubePlayerReady(event),
+                    'onStateChange': (event) => this.onYouTubePlayerStateChange(event),
+                    'onError': (event) => this.onYouTubePlayerError(event)
+                }
+            });
+        } catch (error) {
+            console.error('❌ YouTube 플레이어 생성 실패:', error);
+            this.showVideoError('YouTube 플레이어를 생성할 수 없습니다.');
+        }
     },
 
     // YouTube 플레이어 준비 완료
     onYouTubePlayerReady(event) {
-        console.log('YouTube 플레이어 준비 완료');
+        console.log('✅ YouTube 플레이어 준비 완료');
+
+        // 로딩 오버레이 숨기기
+        const loadingOverlay = document.getElementById('video-loading');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
+
         this.startYouTubeTracking();
+    },
+
+    // YouTube 플레이어 오류 처리
+    onYouTubePlayerError(event) {
+        console.error('❌ YouTube 플레이어 오류:', event.data);
+
+        let errorMessage = 'YouTube 영상을 로드할 수 없습니다.';
+
+        switch (event.data) {
+            case 2:
+                errorMessage = '잘못된 영상 ID입니다.';
+                break;
+            case 5:
+                errorMessage = 'HTML5 플레이어 오류가 발생했습니다.';
+                break;
+            case 100:
+                errorMessage = '영상을 찾을 수 없습니다.';
+                break;
+            case 101:
+            case 150:
+                errorMessage = '영상 소유자가 임베드를 허용하지 않습니다.';
+                break;
+        }
+
+        this.showVideoError(errorMessage);
+    },
+
+    // 영상 오류 표시
+    showVideoError(message) {
+        const videoPlayer = document.getElementById('video-player');
+        videoPlayer.innerHTML = `
+            <div style="text-align: center; padding: 40px; background: #fee; border: 2px solid #fcc; border-radius: 10px; color: #c33;">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                <h3 style="margin-bottom: 10px; color: #c33;">영상 로딩 오류</h3>
+                <p style="margin-bottom: 20px;">${message}</p>
+                <div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 14px; color: #666; margin: 0;">
+                        <strong>해결 방법:</strong><br>
+                        1. 영상 ID가 올바른지 확인<br>
+                        2. 영상이 공개 상태인지 확인<br>
+                        3. 임베드 허용 설정 확인<br>
+                        4. 페이지 새로고침 후 재시도
+                    </p>
+                </div>
+                <button onclick="location.reload()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    페이지 새로고침
+                </button>
+            </div>
+        `;
     },
 
     // YouTube 플레이어 상태 변경
