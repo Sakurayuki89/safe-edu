@@ -412,7 +412,7 @@ const VideoManager = {
 
     startRealVideoTracking() {
         // 실제 영상용 5분 추적
-        const videoDurationSeconds = 300; // 5분
+        const videoDurationSeconds = 60; // 1분
         let currentTime = 0;
 
         const progressFill = document.getElementById('video-progress-fill');
