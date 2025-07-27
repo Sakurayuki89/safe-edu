@@ -791,37 +791,23 @@ const App = {
                 }
 
                 if (isValid) {
+                    // 🚀 즉시 피드백 제공
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '처리 중...';
+                        submitBtn.classList.add('loading');
+                    }
+
                     userSession.name = name;
                     userSession.zodiac = zodiac;
 
-                    // 교육 시작 API 호출
-                    try {
-                        const startResponse = await Utils.fetchWithTimeout('/.netlify/functions/start-education', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                name: userSession.name,
-                                zodiac: userSession.zodiac
-                            })
-                        });
-
-                        const startResult = await startResponse.json();
-
-                        if (startResult.success && startResult.data?.rowNumber) {
-                            userSession.rowNumber = startResult.data.rowNumber;
-                            console.log('교육 시작됨, 행 번호:', userSession.rowNumber);
-                        } else {
-                            console.warn('교육 시작 API 응답 이상:', startResult);
-                        }
-                    } catch (error) {
-                        console.error('교육 시작 API 호출 실패:', error);
-                        // 오류가 발생해도 계속 진행
-                    }
-
-                    await this.setupFortuneScreen();
+                    // 즉시 화면 전환 (사용자 경험 개선)
+                    this.setupFortuneScreenFast();
                     ScreenManager.showScreen('fortune');
+
+                    // 백그라운드에서 교육 시작 API 호출
+                    this.startEducationInBackground();
                 }
             });
         }
@@ -868,6 +854,118 @@ const App = {
         console.log('이벤트 리스너 설정 완료');
     },
 
+    // 🚀 백그라운드에서 교육 시작 API 호출
+    async startEducationInBackground() {
+        try {
+            const startResponse = await Utils.fetchWithTimeout('/.netlify/functions/start-education', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: userSession.name,
+                    zodiac: userSession.zodiac
+                })
+            }, 5000, 1); // 타임아웃 5초, 재시도 1회로 단축
+
+            const startResult = await startResponse.json();
+
+            if (startResult.success && startResult.data?.rowNumber) {
+                userSession.rowNumber = startResult.data.rowNumber;
+                console.log('교육 시작됨, 행 번호:', userSession.rowNumber);
+            } else {
+                console.warn('교육 시작 API 응답 이상:', startResult);
+            }
+        } catch (error) {
+            console.error('교육 시작 API 호출 실패:', error);
+            // 오류가 발생해도 계속 진행 (사용자 경험에 영향 없음)
+        }
+    },
+
+    // 🚀 빠른 운세 화면 설정 (즉시 화면 전환용)
+    setupFortuneScreenFast() {
+        // 띠 표시 (즉시)
+        const zodiacDisplay = document.getElementById('user-zodiac-display');
+        if (zodiacDisplay) {
+            zodiacDisplay.textContent = userSession.zodiac;
+        }
+
+        // 기본 운세 먼저 표시 (즉시)
+        const fortuneText = document.getElementById('fortune-text');
+        if (fortuneText) {
+            const defaultFortune = FORTUNE_DATA[userSession.zodiac] || '좋은 일이 생길 것입니다.';
+            fortuneText.textContent = defaultFortune;
+        }
+
+        // 로또 번호 생성 (즉시) - DocumentFragment 사용으로 성능 최적화
+        const lotteryNumbers = Utils.generateLotteryNumbers();
+        const lotteryContainer = document.getElementById('lottery-numbers');
+        if (lotteryContainer) {
+            const fragment = document.createDocumentFragment();
+            lotteryNumbers.forEach(num => {
+                const numberDiv = document.createElement('div');
+                numberDiv.className = 'lottery-number';
+                numberDiv.textContent = num;
+                fragment.appendChild(numberDiv);
+            });
+            lotteryContainer.innerHTML = '';
+            lotteryContainer.appendChild(fragment);
+        }
+
+        // AI 운세를 백그라운드에서 로드 (비동기)
+        setTimeout(() => this.loadAIFortuneInBackground(), 100);
+    },
+
+    // 🤖 AI 운세 백그라운드 로딩
+    async loadAIFortuneInBackground() {
+        const fortuneText = document.getElementById('fortune-text');
+        if (!fortuneText) return;
+
+        try {
+            // 로딩 표시 추가
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'fortune-loading';
+            loadingIndicator.innerHTML = '<small style="color: #999;">✨ AI 맞춤형 운세 생성 중...</small>';
+            fortuneText.parentNode.appendChild(loadingIndicator);
+
+            const response = await Utils.fetchWithTimeout('/.netlify/functions/generate-fortune', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: userSession.name,
+                    zodiac: userSession.zodiac
+                })
+            }, 8000, 1); // 타임아웃 8초, 재시도 1회로 단축
+
+            const result = await response.json();
+
+            // 로딩 표시 제거
+            if (loadingIndicator.parentNode) {
+                loadingIndicator.parentNode.removeChild(loadingIndicator);
+            }
+
+            if (result.success && result.fortune) {
+                // AI 운세로 부드럽게 교체
+                fortuneText.style.opacity = '0.5';
+                setTimeout(() => {
+                    fortuneText.textContent = result.fortune;
+                    fortuneText.style.opacity = '1';
+                }, 200);
+                console.log('AI 운세 로드 완료');
+            }
+        } catch (error) {
+            console.warn('AI 운세 로드 실패, 기본 운세 유지:', error);
+            // 로딩 표시 제거
+            const loadingIndicator = fortuneText.parentNode.querySelector('.fortune-loading');
+            if (loadingIndicator && loadingIndicator.parentNode) {
+                loadingIndicator.parentNode.removeChild(loadingIndicator);
+            }
+        }
+    },
+
+    // 기존 setupFortuneScreen 메서드 (필요시 사용)
     async setupFortuneScreen() {
         console.log('운세 화면 설정');
 
