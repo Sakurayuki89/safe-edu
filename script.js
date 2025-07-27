@@ -378,17 +378,25 @@ const VideoManager = {
     getVideoConfig() {
         return {
             iframe: `
-                <iframe 
-                    id="youtube-player"
-                    width="100%" 
-                    height="400" 
-                    src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3&enablejsapi=1"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                    style="border-radius: 10px;"
-                    title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
-                </iframe>
+                <div class="video-container-wrapper">
+                    <iframe 
+                        id="youtube-player"
+                        width="100%" 
+                        height="400" 
+                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=0&fs=0&iv_load_policy=3&enablejsapi=1&disablekb=1"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        style="border-radius: 10px;"
+                        title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
+                    </iframe>
+                    <div class="video-overlay" id="video-overlay">
+                        <div class="overlay-message">
+                            <p>🎬 안전교육 영상 시청 중</p>
+                            <small>영상을 끝까지 시청해주세요</small>
+                        </div>
+                    </div>
+                </div>
                 <div class="privacy-notice">
                     <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 영상 재생 전까지 쿠키가 설정되지 않습니다.</small>
                 </div>
@@ -412,12 +420,20 @@ const VideoManager = {
 
     startRealVideoTracking() {
         // 실제 영상용 5분 추적
-        const videoDurationSeconds = 60; // 1분
+        const videoDurationSeconds = 300; // 5분
         let currentTime = 0;
 
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
+        const overlay = document.getElementById('video-overlay');
+
+        // 초기에 오버레이 표시
+        if (overlay) {
+            setTimeout(() => {
+                overlay.classList.add('show');
+            }, 1000); // 1초 후 오버레이 표시
+        }
 
         this.videoState.progressInterval = setInterval(() => {
             currentTime += 1;
@@ -434,9 +450,26 @@ const VideoManager = {
                     `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
             }
 
+            // 진행률에 따라 오버레이 제어
+            if (overlay) {
+                if (progressPercentage < 80) {
+                    // 80% 미만일 때는 오버레이 표시
+                    overlay.classList.add('show');
+                } else {
+                    // 80% 이상일 때는 오버레이 숨김
+                    overlay.classList.remove('show');
+                }
+            }
+
             if (currentTime >= videoDurationSeconds * 0.9) { // 90% 시청 시 완료
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
+                
+                // 완료 시 오버레이 완전히 제거
+                if (overlay) {
+                    overlay.classList.remove('show');
+                }
+                
                 if (completeBtn) {
                     completeBtn.style.display = 'block';
                     completeBtn.scrollIntoView({ behavior: 'smooth' });
@@ -803,9 +836,9 @@ const App = {
         setTimeout(() => {
             const assessmentForm = document.getElementById('assessment-form');
             if (assessmentForm) {
-                assessmentForm.addEventListener('submit', (e) => {
+                assessmentForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    this.handleQuizSubmit();
+                    await this.handleQuizSubmit();
                 });
             }
         }, 100);
@@ -999,7 +1032,7 @@ const App = {
         }
     },
 
-    handleQuizSubmit() {
+    async handleQuizSubmit() {
         console.log('퀴즈 제출 처리');
 
         // 답변 수집
@@ -1012,11 +1045,104 @@ const App = {
             }
         });
 
-        // 답변 완료 시 바로 완료 화면으로 이동
-        // (정답 확인은 백엔드에서 처리)
         console.log('수집된 답변:', userSession.quizAnswers);
-        this.setupCompletionScreen();
-        ScreenManager.showScreen('completion');
+
+        // 로딩 상태 표시
+        this.showQuizCheckingState();
+
+        try {
+            // 백엔드에서 정답 확인
+            const isAllCorrect = await this.checkQuizAnswersWithAPI();
+            
+            if (isAllCorrect) {
+                // 모든 문제를 맞춘 경우 완료 화면으로 이동
+                console.log('모든 문제 정답! 완료 화면으로 이동');
+                this.setupCompletionScreen();
+                ScreenManager.showScreen('completion');
+            } else {
+                // 틀린 문제가 있는 경우 동영상 페이지로 돌아가기
+                console.log('틀린 문제가 있습니다. 동영상 페이지로 돌아갑니다.');
+                this.showQuizFailureMessage();
+            }
+        } catch (error) {
+            console.error('퀴즈 정답 확인 중 오류:', error);
+            // 오류 발생 시 기본적으로 완료 화면으로 이동
+            this.setupCompletionScreen();
+            ScreenManager.showScreen('completion');
+        }
+    },
+
+    showQuizCheckingState() {
+        const submitBtn = document.querySelector('#assessment-form button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="btn-icon">⏳</span>
+                정답 확인 중...
+            `;
+        }
+    },
+
+    async checkQuizAnswersWithAPI() {
+        try {
+            const response = await Utils.fetchWithTimeout('/.netlify/functions/check-quiz-answers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    answers: userSession.quizAnswers
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                console.log(`정답 확인 결과: ${result.data.correctCount}/${result.data.totalQuestions} (${result.data.scorePercentage}%)`);
+                return result.data.isAllCorrect;
+            } else {
+                console.error('정답 확인 API 응답 오류:', result);
+                return false;
+            }
+        } catch (error) {
+            console.error('정답 확인 API 호출 실패:', error);
+            throw error;
+        }
+    },
+
+    showQuizFailureMessage() {
+        // 모달로 결과 표시
+        const modal = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        if (modal && modalTitle && modalMessage && modalCloseBtn) {
+            modalTitle.textContent = '❌ 퀴즈 결과';
+            modalMessage.innerHTML = `
+                <p>아쉽게도 틀린 문제가 있습니다.</p>
+                <p>안전교육 영상을 다시 시청한 후 퀴즈에 재도전해주세요.</p>
+                <br>
+                <p><strong>💡 팁:</strong> 영상을 주의 깊게 시청하시면 모든 답을 찾을 수 있습니다!</p>
+            `;
+
+            // 모달 표시
+            modal.style.display = 'flex';
+
+            // 확인 버튼 클릭 시 동영상 페이지로 이동
+            modalCloseBtn.onclick = () => {
+                modal.style.display = 'none';
+                
+                // 영상 완료 상태 초기화
+                userSession.videoCompleted = false;
+                
+                // 동영상 페이지로 이동
+                VideoManager.setupVideoPlayer();
+                ScreenManager.showScreen('video');
+                
+                console.log('동영상 페이지로 돌아갔습니다.');
+            };
+        }
     },
 
     setupCompletionScreen() {
