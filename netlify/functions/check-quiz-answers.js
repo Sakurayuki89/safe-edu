@@ -64,9 +64,12 @@ exports.handler = async (event, context) => {
                 const isCorrect = userAnswer === question.correctAnswer;
                 if (isCorrect) correctCount++;
                 
+                console.log(`문제 ${index + 1}: 사용자답변=${userAnswer}, 정답=${question.correctAnswer}, 정답여부=${isCorrect}`);
+                
                 results.push({
                     questionId: question.id,
                     userAnswer: userAnswer,
+                    correctAnswer: question.correctAnswer,
                     isCorrect: isCorrect
                 });
             }
@@ -75,6 +78,8 @@ exports.handler = async (event, context) => {
         const totalQuestions = quizData.length;
         const isAllCorrect = correctCount === totalQuestions;
         const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+        
+        console.log(`최종 결과: ${correctCount}/${totalQuestions} 정답 (${scorePercentage}%), 모든문제정답=${isAllCorrect}`);
         
         // 성공 응답
         return {

@@ -893,38 +893,47 @@ const App = {
 
         // 답변 수집
         userSession.quizAnswers = [];
-        userSession.quizData.forEach(question => {
+        userSession.quizData.forEach((question, index) => {
             const selectedOption = document.querySelector(`input[name="question-${question.id}"]:checked`);
             if (selectedOption) {
                 // 1-based에서 0-based로 변환 (백엔드에서 0-based index 사용)
-                userSession.quizAnswers.push(parseInt(selectedOption.value) - 1);
+                const userAnswer = parseInt(selectedOption.value) - 1;
+                userSession.quizAnswers.push(userAnswer);
+                console.log(`문제 ${index + 1}: 사용자 답변 = ${userAnswer}, 선택한 옵션 = ${selectedOption.value}`);
+            } else {
+                console.error(`문제 ${index + 1}: 답변이 선택되지 않았습니다.`);
             }
         });
 
-        console.log('수집된 답변:', userSession.quizAnswers);
+        console.log('수집된 답변 (0-based):', userSession.quizAnswers);
+        console.log('퀴즈 데이터:', userSession.quizData);
 
         // 로딩 상태 표시
         this.showQuizCheckingState();
+
+        // 디버깅 정보 출력
+        this.debugQuizAnswers();
 
         try {
             // 백엔드에서 정답 확인
             const isAllCorrect = await this.checkQuizAnswersWithAPI();
 
-            if (isAllCorrect) {
+            if (isAllCorrect === true) {
                 // 모든 문제를 맞춘 경우 완료 화면으로 이동
-                console.log('모든 문제 정답! 완료 화면으로 이동');
+                console.log('✅ 모든 문제 정답! 완료 화면으로 이동');
                 this.setupCompletionScreen();
                 ScreenManager.showScreen('completion');
             } else {
                 // 틀린 문제가 있는 경우 동영상 페이지로 돌아가기
-                console.log('틀린 문제가 있습니다. 동영상 페이지로 돌아갑니다.');
+                console.log('❌ 틀린 문제가 있습니다. 동영상 페이지로 돌아갑니다.');
+                console.log('isAllCorrect 값:', isAllCorrect);
                 this.showQuizFailureMessage();
             }
         } catch (error) {
             console.error('퀴즈 정답 확인 중 오류:', error);
-            // 오류 발생 시 기본적으로 완료 화면으로 이동
-            this.setupCompletionScreen();
-            ScreenManager.showScreen('completion');
+            // 오류 발생 시 안전하게 실패 처리 (영상 재시청)
+            alert('정답 확인 중 오류가 발생했습니다. 영상을 다시 시청해주세요.');
+            this.showQuizFailureMessage();
         }
     },
 
@@ -937,6 +946,24 @@ const App = {
                 정답 확인 중...
             `;
         }
+    },
+
+    // 디버깅용 함수 - 퀴즈 데이터와 사용자 답변 비교
+    debugQuizAnswers() {
+        console.log('=== 퀴즈 디버깅 정보 ===');
+        console.log('퀴즈 데이터:', userSession.quizData);
+        console.log('사용자 답변:', userSession.quizAnswers);
+        
+        userSession.quizData.forEach((question, index) => {
+            const userAnswer = userSession.quizAnswers[index];
+            const correctAnswer = question.correctAnswer - 1; // 1-based에서 0-based로 변환
+            console.log(`문제 ${index + 1}:`);
+            console.log(`  질문: ${question.question}`);
+            console.log(`  선택지: ${question.options}`);
+            console.log(`  사용자 답변: ${userAnswer} (${question.options[userAnswer]})`);
+            console.log(`  정답: ${correctAnswer} (${question.options[correctAnswer]})`);
+            console.log(`  정답 여부: ${userAnswer === correctAnswer}`);
+        });
     },
 
     async checkQuizAnswersWithAPI() {
@@ -955,6 +982,8 @@ const App = {
 
             if (result.success && result.data) {
                 console.log(`정답 확인 결과: ${result.data.correctCount}/${result.data.totalQuestions} (${result.data.scorePercentage}%)`);
+                console.log('개별 문제 결과:', result.data.results);
+                console.log('모든 문제 정답 여부:', result.data.isAllCorrect);
                 return result.data.isAllCorrect;
             } else {
                 console.error('정답 확인 API 응답 오류:', result);
