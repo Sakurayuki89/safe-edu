@@ -4,7 +4,7 @@
 
 const { google } = require('googleapis');
 
-const MAX_WINNERS = 100; // 최대 당첨자 수
+const MAX_WINNERS = 8; // 매월 최대 당첨자 수
 
 exports.handler = async (event, context) => {
     // CORS 헤더 설정
@@ -42,9 +42,9 @@ exports.handler = async (event, context) => {
         const sheets = google.sheets({ version: 'v4', auth });
         
         const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-        const range = '교육참가자!G:G'; // 당첨여부 컬럼 (G열)
+        const range = '교육참가자!G:H'; // 당첨여부(G열)와 완료시간(H열) 조회
         
-        // Google Sheets에서 당첨여부 데이터 조회
+        // Google Sheets에서 당첨여부와 완료시간 데이터 조회
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
             range
@@ -52,10 +52,42 @@ exports.handler = async (event, context) => {
         
         const values = response.data.values || [];
         
-        // 헤더 제외하고 당첨자 수 계산
-        const winnerCount = values.slice(1).filter(row => 
-            row[0] && (row[0].toString().toLowerCase() === 'true' || row[0] === '당첨')
-        ).length;
+        // 현재 월의 시작일과 종료일 계산 (한국 시간 기준)
+        const now = new Date();
+        const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+        const currentYear = koreaTime.getFullYear();
+        const currentMonth = koreaTime.getMonth();
+        
+        const monthStart = new Date(currentYear, currentMonth, 1);
+        const monthEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+        
+        console.log(`이번 달 범위: ${monthStart.toLocaleDateString('ko-KR')} ~ ${monthEnd.toLocaleDateString('ko-KR')}`);
+        
+        // 헤더 제외하고 이번 달 당첨자 수 계산
+        const winnerCount = values.slice(1).filter(row => {
+            const isWinner = row[0] && (row[0].toString().toLowerCase() === 'true' || row[0] === '당첨');
+            
+            if (!isWinner) return false;
+            
+            // 완료시간이 있는 경우 이번 달인지 확인
+            if (row[1]) {
+                try {
+                    // 한국 시간 형식 파싱 (예: "2025. 1. 27. 오후 4:58:17")
+                    const completionTimeStr = row[1].toString();
+                    const completionDate = new Date(completionTimeStr);
+                    
+                    // 유효한 날짜인지 확인
+                    if (!isNaN(completionDate.getTime())) {
+                        return completionDate >= monthStart && completionDate <= monthEnd;
+                    }
+                } catch (error) {
+                    console.warn('날짜 파싱 오류:', row[1], error);
+                }
+            }
+            
+            // 완료시간이 없거나 파싱 실패 시 당첨자로 계산 (안전장치)
+            return true;
+        }).length;
         
         const canWin = winnerCount < MAX_WINNERS;
         
@@ -69,7 +101,8 @@ exports.handler = async (event, context) => {
                     currentWinners: winnerCount,
                     maxWinners: MAX_WINNERS,
                     canWin: canWin,
-                    remainingSlots: Math.max(0, MAX_WINNERS - winnerCount)
+                    remainingSlots: Math.max(0, MAX_WINNERS - winnerCount),
+                    month: `${currentYear}년 ${currentMonth + 1}월`
                 }
             })
         };

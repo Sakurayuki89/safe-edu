@@ -10,8 +10,8 @@ const CONFIG = {
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
     LOADING_DELAY: 0, // 즉시 로딩
     VIDEO_SIMULATION_DURATION: 15,
-    WIN_PROBABILITY: 0.1,
-    MAX_WINNERS: 100
+    WIN_PROBABILITY: 0.06,  // 6% 당첨 확률
+    MAX_WINNERS: 8          // 매월 최대 8명 당첨
 };
 
 const userSession = {
@@ -1435,8 +1435,8 @@ const App = {
                 // 당첨자 한도 초과
                 userSession.isWinner = false;
                 const currentWinners = checkResult.data?.currentWinners || 0;
-                const maxWinners = checkResult.data?.maxWinners || 100;
-                this.showModal('😢 아쉽네요', `당첨자 한도가 초과되었습니다!\n현재 당첨자: ${currentWinners}/${maxWinners}\n아쉽지만 꽝입니다!`, () => {
+                const maxWinners = checkResult.data?.maxWinners || 8;
+                this.showModal('😢 아쉽네요', `이번 달 당첨자 한도(${maxWinners}명)가 모두 소진되었습니다.\n\n다음 달 기회를 이용해 주세요!\n\n현재 당첨자: ${currentWinners}/${maxWinners}명`, () => {
                     this.showEmployeeIdInput();
                 });
                 return;
