@@ -302,8 +302,8 @@ const VideoManager = {
                 </div>
             `;
 
-            // YouTube Player API 초기화
-            this.initializeYouTubePlayer();
+            // 영상 컨트롤 설정
+            this.setupVideoControls();
 
             // 영상 로드 실패 감지 및 fallback 처리
             this.setupVideoFallback(container, videoConfig);
@@ -378,30 +378,22 @@ const VideoManager = {
     getVideoConfig() {
         return {
             iframe: `
-                <div class="video-container-wrapper">
-                    <iframe 
-                        id="youtube-player"
-                        width="100%" 
-                        height="400" 
-                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=0&fs=0&iv_load_policy=3&enablejsapi=1&disablekb=1"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen
-                        style="border-radius: 10px;"
-                        title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
-                    </iframe>
-                    <div class="video-overlay" id="video-overlay">
-                        <div class="overlay-message">
-                            <p>🎬 안전교육 영상 시청 중</p>
-                            <small>영상을 끝까지 시청해주세요</small>
-                        </div>
-                    </div>
-                </div>
+                <iframe 
+                    id="youtube-player"
+                    width="100%" 
+                    height="400" 
+                    src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3&enablejsapi=1"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    style="border-radius: 10px;"
+                    title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
+                </iframe>
                 <div class="privacy-notice">
                     <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 영상 재생 전까지 쿠키가 설정되지 않습니다.</small>
                 </div>
             `,
-            duration: 300, // 5분 (초 단위)
+            duration: 10, // 10초 (초 단위)
             fallbackMessage: `
                 <div class="video-fallback">
                     <h3>⚠️ YouTube 영상 로드 실패</h3>
@@ -426,14 +418,6 @@ const VideoManager = {
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
-        const overlay = document.getElementById('video-overlay');
-
-        // 초기에 오버레이 표시
-        if (overlay) {
-            setTimeout(() => {
-                overlay.classList.add('show');
-            }, 1000); // 1초 후 오버레이 표시
-        }
 
         this.videoState.progressInterval = setInterval(() => {
             currentTime += 1;
@@ -450,25 +434,13 @@ const VideoManager = {
                     `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
             }
 
-            // 진행률에 따라 오버레이 제어
-            if (overlay) {
-                if (progressPercentage < 80) {
-                    // 80% 미만일 때는 오버레이 표시
-                    overlay.classList.add('show');
-                } else {
-                    // 80% 이상일 때는 오버레이 숨김
-                    overlay.classList.remove('show');
-                }
-            }
+            // 오버레이 제거됨
 
-            if (currentTime >= videoDurationSeconds * 0.9) { // 90% 시청 시 완료
+            if (currentTime >= videoDurationSeconds * 1) { // 100% 시청 시 완료
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
                 
-                // 완료 시 오버레이 완전히 제거
-                if (overlay) {
-                    overlay.classList.remove('show');
-                }
+                // 영상 완료
                 
                 if (completeBtn) {
                     completeBtn.style.display = 'block';
@@ -478,64 +450,7 @@ const VideoManager = {
         }, 1000);
     },
 
-    initializeYouTubePlayer() {
-        // YouTube Player API가 로드되지 않은 경우 로드
-        if (typeof YT === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://www.youtube.com/iframe_api';
-            document.head.appendChild(script);
-
-            window.onYouTubeIframeAPIReady = () => {
-                this.createYouTubePlayer();
-            };
-        } else {
-            this.createYouTubePlayer();
-        }
-    },
-
-    createYouTubePlayer() {
-        // iframe이 로드된 후 Player API 연결 시도
-        setTimeout(() => {
-            try {
-                const iframe = document.getElementById('youtube-player');
-                if (iframe) {
-                    this.youtubePlayer = new YT.Player('youtube-player', {
-                        events: {
-                            'onReady': (event) => {
-                                console.log('YouTube Player 준비 완료');
-                                this.setupVideoControls();
-                            },
-                            'onStateChange': (event) => {
-                                this.handleYouTubeStateChange(event);
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.warn('YouTube Player API 초기화 실패, 기본 컨트롤 사용:', error);
-                this.setupVideoControls();
-            }
-        }, 1000);
-    },
-
-    handleYouTubeStateChange(event) {
-        // YouTube 플레이어 상태 변경 감지
-        if (event.data === YT.PlayerState.PLAYING) {
-            this.videoState.isPlaying = true;
-            this.videoState.isPaused = false;
-            this.updateControlButtons();
-        } else if (event.data === YT.PlayerState.PAUSED) {
-            this.videoState.isPaused = true;
-            this.updateControlButtons();
-        } else if (event.data === YT.PlayerState.ENDED) {
-            userSession.videoCompleted = true;
-            const completeBtn = document.getElementById('video-complete-btn');
-            if (completeBtn) {
-                completeBtn.style.display = 'block';
-                completeBtn.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-    },
+    // YouTube API 관련 함수들 제거 - 간단한 컨트롤로 변경
 
     updateControlButtons() {
         const pauseBtn = document.getElementById('video-pause-btn');
@@ -604,86 +519,95 @@ const VideoManager = {
     restartVideo() {
         console.log('영상 재시작');
 
-        // YouTube Player API 사용 가능한 경우
-        if (this.youtubePlayer && typeof this.youtubePlayer.seekTo === 'function') {
-            try {
-                this.youtubePlayer.seekTo(0);
-                this.youtubePlayer.playVideo();
-                console.log('YouTube Player API로 재시작');
-                userSession.videoCompleted = false;
-                const completeBtn = document.getElementById('video-complete-btn');
-                if (completeBtn) completeBtn.style.display = 'none';
-                return;
-            } catch (error) {
-                console.warn('YouTube Player API 재시작 실패:', error);
-            }
-        }
-
-        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
+        // 기존 추적 중지
         if (this.videoState.progressInterval) {
             clearInterval(this.videoState.progressInterval);
         }
 
+        // 상태 초기화
         this.videoState.currentProgress = 0;
         this.videoState.pausedAt = 0;
         this.videoState.isPlaying = false;
         this.videoState.isPaused = false;
         userSession.videoCompleted = false;
 
+        // UI 초기화
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
 
         if (progressFill) progressFill.style.width = '0%';
-        if (timeDisplay) timeDisplay.textContent = '00:00 / 10:00';
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 05:00';
         if (completeBtn) completeBtn.style.display = 'none';
 
+        // 버튼 상태 업데이트
         this.updateControlButtons();
-        this.setupVideoPlayer();
+        
+        // 영상 추적 재시작
+        this.startRealVideoTracking();
+        
+        console.log('영상이 처음부터 재시작되었습니다');
     },
 
     pauseVideo() {
         console.log('영상 일시정지');
-
-        // YouTube Player API 사용 가능한 경우
-        if (this.youtubePlayer && typeof this.youtubePlayer.pauseVideo === 'function') {
-            try {
-                this.youtubePlayer.pauseVideo();
-                console.log('YouTube Player API로 일시정지');
-                return;
-            } catch (error) {
-                console.warn('YouTube Player API 일시정지 실패:', error);
-            }
+        
+        // 진행률 추적 일시정지
+        if (this.videoState.progressInterval) {
+            clearInterval(this.videoState.progressInterval);
+            this.videoState.isPaused = true;
+            this.videoState.pausedAt = this.videoState.currentProgress;
+            this.updateControlButtons();
+            console.log('영상 추적 일시정지됨');
         }
-
-        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
-        if (!this.videoState.isPlaying || this.videoState.isPaused) return;
-
-        this.videoState.isPaused = true;
-        this.videoState.pausedAt = this.videoState.currentProgress;
-        this.updateControlButtons();
     },
 
     resumeVideo() {
         console.log('영상 재생 재개');
-
-        // YouTube Player API 사용 가능한 경우
-        if (this.youtubePlayer && typeof this.youtubePlayer.playVideo === 'function') {
-            try {
-                this.youtubePlayer.playVideo();
-                console.log('YouTube Player API로 재생 재개');
-                return;
-            } catch (error) {
-                console.warn('YouTube Player API 재생 실패:', error);
-            }
+        
+        // 진행률 추적 재개
+        if (this.videoState.isPaused) {
+            this.videoState.isPaused = false;
+            this.videoState.currentProgress = this.videoState.pausedAt;
+            this.continueVideoTracking();
+            this.updateControlButtons();
+            console.log('영상 추적 재개됨');
         }
+    },
 
-        // 시뮬레이션 모드 또는 API 실패 시 기본 처리
-        if (!this.videoState.isPaused) return;
+    continueVideoTracking() {
+        const videoDurationSeconds = 300; // 5분
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
 
-        this.videoState.isPaused = false;
-        this.startVideoSimulation();
-        this.updateControlButtons();
+        this.videoState.progressInterval = setInterval(() => {
+            if (this.videoState.isPaused) return;
+
+            this.videoState.currentProgress += 1;
+            const progressPercentage = (this.videoState.currentProgress / videoDurationSeconds) * 100;
+
+            if (progressFill) progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
+
+            const currentMinutes = Math.floor(this.videoState.currentProgress / 60);
+            const currentSeconds = this.videoState.currentProgress % 60;
+            const totalMinutes = Math.floor(videoDurationSeconds / 60);
+
+            if (timeDisplay) {
+                timeDisplay.textContent =
+                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
+            }
+
+            if (this.videoState.currentProgress >= videoDurationSeconds * 0.9) {
+                clearInterval(this.videoState.progressInterval);
+                userSession.videoCompleted = true;
+                
+                if (completeBtn) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }, 1000);
     }
 };
 
