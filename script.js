@@ -378,22 +378,19 @@ const VideoManager = {
     getVideoConfig() {
         return {
             iframe: `
-                <div class="video-container-protected">
-                    <iframe 
-                        id="youtube-player"
-                        width="100%" 
-                        height="400" 
-                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=0&iv_load_policy=3&enablejsapi=1"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen
-                        style="border-radius: 10px;"
-                        title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
-                    </iframe>
-                    <div class="video-protection-overlay" id="video-protection-overlay"></div>
-                </div>
+                <iframe 
+                    id="youtube-player"
+                    width="100%" 
+                    height="400" 
+                    src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=1&iv_load_policy=3&enablejsapi=1"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                    style="border-radius: 10px;"
+                    title="전기설비 안전교육 영상 (Privacy-Enhanced Mode)">
+                </iframe>
                 <div class="privacy-notice">
-                    <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 빨리감기가 제한됩니다.</small>
+                    <small>🔒 개인정보 보호 강화 모드로 재생됩니다.</small>
                 </div>
             `,
             duration: 125, // 2분 5초 (초 단위)
@@ -421,7 +418,6 @@ const VideoManager = {
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
-        const protectionOverlay = document.getElementById('video-protection-overlay');
 
         this.videoState.progressInterval = setInterval(() => {
             currentTime += 1;
@@ -445,10 +441,7 @@ const VideoManager = {
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
 
-                // 영상 완료 시 보호 오버레이 제거 (자유롭게 조작 가능)
-                if (protectionOverlay) {
-                    protectionOverlay.style.display = 'none';
-                }
+                // 영상 완료
 
                 if (completeBtn) {
                     completeBtn.style.display = 'block';

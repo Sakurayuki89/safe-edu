@@ -563,41 +563,7 @@ h3 {
     font-size: 12px;
 }
 
-/* 영상 보호 컨테이너 */
-.video-container-protected {
-    position: relative;
-    width: 100%;
-    height: 400px;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-/* 영상 조작 방지 오버레이 - 시크바만 차단 */
-.video-protection-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 40px; /* 하단 40px만 차단 (시크바 영역) */
-    z-index: 10;
-    background: transparent;
-    pointer-events: auto; /* 시크바 클릭 차단 */
-    cursor: not-allowed;
-}
-
-/* 재생 버튼 영역은 차단하지 않음 */
-.video-protection-overlay::before {
-    content: '⚠️ 빨리감기 제한';
-    position: absolute;
-    bottom: 5px;
-    right: 10px;
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.7);
-    background: rgba(0, 0, 0, 0.5);
-    padding: 2px 6px;
-    border-radius: 3px;
-    pointer-events: none;
-}
+/* 오버레이 제거됨 - 자유로운 영상 시청 */
 
 /* 영상 제어 버튼들 */
 .video-controls {
