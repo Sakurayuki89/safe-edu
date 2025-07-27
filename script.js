@@ -59,8 +59,7 @@ const FORTUNE_HASHTAGS = {
 };
 
 const SAFETY_HASHTAGS = [
-    '#전원차단확인', '#절연장갑착용', '#접지확인', '#전압측정',
-    '#안전거리유지', '#작업허가서확인', '#보호구착용', '#화재예방'
+    '#전원차단확인', '#절연장갑착용', '#보호구착용'
 ];
 
 console.log('데이터 로드 완료:', new Date().toLocaleTimeString());
@@ -450,15 +449,12 @@ const VideoManager = {
         const videoDurationSeconds = 125; // 2분 5초
         let currentTime = 0;
 
-        const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
 
         this.videoState.progressInterval = setInterval(() => {
             currentTime += 1;
-            const progressPercentage = (currentTime / videoDurationSeconds) * 100;
-
-            if (progressFill) progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
+            // 진행바 제거됨
 
             const currentMinutes = Math.floor(currentTime / 60);
             const currentSeconds = currentTime % 60;
@@ -589,12 +585,9 @@ const VideoManager = {
         }
         userSession.videoCompleted = false;
 
-        // 진행바 초기 상태 설정
-        const progressFill = document.getElementById('video-progress-fill');
+        // 진행바 초기 상태 설정 (진행바 제거됨)
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
-
-        if (progressFill) progressFill.style.width = '0%';
         if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
         if (completeBtn) completeBtn.style.display = 'none';
 
@@ -609,7 +602,6 @@ const VideoManager = {
         this.videoState.isPaused = false;
         this.videoState.currentProgress = this.videoState.pausedAt || 0;
 
-        const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
 
@@ -617,9 +609,7 @@ const VideoManager = {
             if (this.videoState.isPaused) return;
 
             this.videoState.currentProgress += 1;
-            const progressPercentage = (this.videoState.currentProgress / this.videoState.totalDuration) * 100;
-
-            if (progressFill) progressFill.style.width = `${progressPercentage}%`;
+            // 진행바 제거됨
             if (timeDisplay) timeDisplay.textContent = `${this.videoState.currentProgress}:00 / ${this.videoState.totalDuration}:00`;
 
             if (this.videoState.currentProgress >= this.videoState.totalDuration) {
@@ -638,7 +628,6 @@ const VideoManager = {
 
     continueVideoTracking() {
         const videoDurationSeconds = 125; // 2분 5초
-        const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
 
@@ -646,9 +635,7 @@ const VideoManager = {
             if (this.videoState.isPaused) return;
 
             this.videoState.currentProgress += 1;
-            const progressPercentage = (this.videoState.currentProgress / videoDurationSeconds) * 100;
-
-            if (progressFill) progressFill.style.width = `${Math.min(progressPercentage, 100)}%`;
+            // 진행바 제거됨
 
             const currentMinutes = Math.floor(this.videoState.currentProgress / 60);
             const currentSeconds = this.videoState.currentProgress % 60;
@@ -688,12 +675,9 @@ const VideoManager = {
         this.videoState.currentProgress = 0;
         this.videoState.pausedAt = 0;
 
-        // UI 요소 초기화
-        const progressFill = document.getElementById('video-progress-fill');
+        // UI 요소 초기화 (진행바 제거됨)
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
-
-        if (progressFill) progressFill.style.width = '0%';
         if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
         if (completeBtn) completeBtn.style.display = 'none';
 
@@ -1386,7 +1370,7 @@ const App = {
             ).join(' ');
         }
 
-        const safetyHashtags = SAFETY_HASHTAGS.slice(0, 4);
+        const safetyHashtags = SAFETY_HASHTAGS;
         const safetyHashtagsContainer = document.getElementById('review-safety-hashtags');
         if (safetyHashtagsContainer) {
             safetyHashtagsContainer.innerHTML = safetyHashtags.map(tag =>
@@ -1642,7 +1626,7 @@ const App = {
                         <div class="detail-item">
                             <span class="detail-label">당첨 여부:</span>
                             <span class="detail-value ${userSession.isWinner ? 'winner' : 'no-winner'}">
-                                ${userSession.isWinner ? '🎉 당첨' : '😊 참여'}
+                                ${userSession.isWinner ? '🎉 당첨' : '❌ 미당첨'}
                             </span>
                         </div>
                         <div class="detail-item">

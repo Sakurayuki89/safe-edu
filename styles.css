@@ -650,12 +650,15 @@ h3 {
     display: block;
 }
 
+/* 영상 진행바 제거됨
 .video-progress {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
 }
+*/
 
+/* 영상 진행바 제거됨
 .progress-bar {
     flex: 1;
     height: 8px;
@@ -670,6 +673,7 @@ h3 {
     width: 0%;
     transition: width 0.3s ease;
 }
+*/
 
 /* 시간 표시 컨테이너 */
 .video-time-container {
@@ -1433,10 +1437,12 @@ h3 {
         width: 100%;
     }
     
+    /* 영상 진행바 제거됨
     .video-progress {
         flex-direction: column;
         margin-bottom: 10px;
     }
+    */
     
     .video-time-container {
         margin: 10px 0;
