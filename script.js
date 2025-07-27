@@ -467,21 +467,8 @@ const VideoManager = {
     },
 
     setupVideoControls() {
-        setTimeout(() => {
-            const restartBtn = document.getElementById('video-restart-btn');
-            const pauseBtn = document.getElementById('video-pause-btn');
-            const resumeBtn = document.getElementById('video-resume-btn');
-
-            if (restartBtn) {
-                restartBtn.addEventListener('click', () => this.restartVideo());
-            }
-            if (pauseBtn) {
-                pauseBtn.addEventListener('click', () => this.pauseVideo());
-            }
-            if (resumeBtn) {
-                resumeBtn.addEventListener('click', () => this.resumeVideo());
-            }
-        }, 100);
+        // 영상 컨트롤 버튼들이 제거되어 더 이상 필요하지 않음
+        console.log('영상 컨트롤 설정 완료 (버튼 제거됨)');
     },
 
     startVideoSimulation() {
@@ -517,64 +504,7 @@ const VideoManager = {
         }, 1000);
     },
 
-    restartVideo() {
-        console.log('영상 재시작');
-
-        // 기존 추적 중지
-        if (this.videoState.progressInterval) {
-            clearInterval(this.videoState.progressInterval);
-        }
-
-        // 상태 초기화
-        this.videoState.currentProgress = 0;
-        this.videoState.pausedAt = 0;
-        this.videoState.isPlaying = false;
-        this.videoState.isPaused = false;
-        userSession.videoCompleted = false;
-
-        // UI 초기화
-        const progressFill = document.getElementById('video-progress-fill');
-        const timeDisplay = document.getElementById('video-time-display');
-        const completeBtn = document.getElementById('video-complete-btn');
-
-        if (progressFill) progressFill.style.width = '0%';
-        if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
-        if (completeBtn) completeBtn.style.display = 'none';
-
-        // 버튼 상태 업데이트
-        this.updateControlButtons();
-
-        // 영상 추적 재시작
-        this.startRealVideoTracking();
-
-        console.log('영상이 처음부터 재시작되었습니다');
-    },
-
-    pauseVideo() {
-        console.log('영상 일시정지');
-
-        // 진행률 추적 일시정지
-        if (this.videoState.progressInterval) {
-            clearInterval(this.videoState.progressInterval);
-            this.videoState.isPaused = true;
-            this.videoState.pausedAt = this.videoState.currentProgress;
-            this.updateControlButtons();
-            console.log('영상 추적 일시정지됨');
-        }
-    },
-
-    resumeVideo() {
-        console.log('영상 재생 재개');
-
-        // 진행률 추적 재개
-        if (this.videoState.isPaused) {
-            this.videoState.isPaused = false;
-            this.videoState.currentProgress = this.videoState.pausedAt;
-            this.continueVideoTracking();
-            this.updateControlButtons();
-            console.log('영상 추적 재개됨');
-        }
-    },
+    // 영상 컨트롤 함수들 제거됨 - 자동 진행만 지원
 
     continueVideoTracking() {
         const videoDurationSeconds = 125; // 2분 5초

@@ -22,8 +22,17 @@ body {
     line-height: 1.6;
     color: #333;
     background: #667eea; /* 단순한 배경으로 빠른 로딩 */
+    /* 카카오톡 인앱 브라우저 환경 최적화 */
     min-height: 100vh;
+    min-height: -webkit-fill-available; /* iOS Safari 지원 */
+    min-height: 100dvh; /* 동적 뷰포트 높이 (최신 브라우저) */
     overflow-x: hidden;
+    /* Flexbox로 완벽 중앙 정렬 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
 /* 페이지 로드 후 그라디언트 적용 */
@@ -66,24 +75,40 @@ body.loaded {
 
 /* 메인 컨테이너 */
 .app-container {
+    /* 카카오톡 인앱 브라우저 최적화 */
+    width: 100%;
     max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    /* 완벽한 중앙 정렬을 위한 Flexbox */
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
+    align-items: center;
+    /* 높이 설정 */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: 100dvh;
+    /* 콘텐츠 박스 스타일 */
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
 }
 
 /* 화면 전환 시스템 */
 .screen {
     display: none;
     width: 100%;
+    max-width: 100%;
     background: white;
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     position: relative;
+    padding: 30px;
+    box-sizing: border-box;
+    margin: 10px;
 }
 
 .screen.active {
@@ -565,19 +590,29 @@ h3 {
 
 /* 오버레이 제거됨 - 자유로운 영상 시청 */
 
-/* 영상 제어 버튼들 */
-.video-controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-    flex-wrap: wrap;
+/* 영상 시청 안내 메시지 */
+.video-guide {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    text-align: center;
 }
 
-.video-controls .btn {
-    min-width: 120px;
-    font-size: 14px;
-    padding: 10px 20px;
+.guide-message {
+    color: white;
+}
+
+.guide-message p {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.guide-message small {
+    font-size: 13px;
+    opacity: 0.9;
+    display: block;
 }
 
 .video-progress {
@@ -1205,8 +1240,23 @@ h3 {
    📱 반응형 디자인 (개선됨)
    ======================================== */
 @media (max-width: 768px) {
-    .app-container {
+    body {
         padding: 10px;
+    }
+    
+    .app-container {
+        margin: 0;
+        padding: 0;
+        border-radius: 15px;
+        min-height: calc(100vh - 20px);
+        min-height: calc(-webkit-fill-available - 20px);
+        min-height: calc(100dvh - 20px);
+    }
+    
+    .screen {
+        padding: 20px;
+        margin: 5px;
+        border-radius: 10px;
     }
     
     .screen-content {
@@ -1335,14 +1385,18 @@ h3 {
         gap: 10px;
     }
     
-    .video-controls {
-        flex-direction: column;
-        gap: 8px;
+    .video-guide {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 8px;
     }
     
-    .video-controls .btn {
-        width: 100%;
-        min-width: auto;
+    .guide-message p {
+        font-size: 14px;
+    }
+    
+    .guide-message small {
+        font-size: 12px;
     }
     
     .lottery-numbers {
