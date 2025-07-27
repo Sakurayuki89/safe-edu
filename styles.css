@@ -572,28 +572,31 @@ h3 {
     overflow: hidden;
 }
 
-/* 영상 조작 방지 오버레이 (투명) */
+/* 영상 조작 방지 오버레이 - 시크바만 차단 */
 .video-protection-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 5;
-    background: transparent;
-    pointer-events: auto; /* 클릭 이벤트 차단 */
-    cursor: default;
-}
-
-/* 영상 하단 30px는 오버레이 제외 (재생 버튼 클릭 가능하도록) */
-.video-protection-overlay::after {
-    content: '';
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 30px;
-    pointer-events: none; /* 하단 30px는 클릭 가능 */
+    height: 40px; /* 하단 40px만 차단 (시크바 영역) */
+    z-index: 10;
+    background: transparent;
+    pointer-events: auto; /* 시크바 클릭 차단 */
+    cursor: not-allowed;
+}
+
+/* 재생 버튼 영역은 차단하지 않음 */
+.video-protection-overlay::before {
+    content: '⚠️ 빨리감기 제한';
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+    pointer-events: none;
 }
 
 /* 영상 제어 버튼들 */

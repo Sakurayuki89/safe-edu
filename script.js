@@ -383,7 +383,7 @@ const VideoManager = {
                         id="youtube-player"
                         width="100%" 
                         height="400" 
-                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=0&fs=0&iv_load_policy=3&enablejsapi=1&disablekb=1"
+                        src="https://www.youtube-nocookie.com/embed/${CONFIG.YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1&controls=1&fs=0&iv_load_policy=3&enablejsapi=1"
                         frameborder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen
@@ -396,7 +396,7 @@ const VideoManager = {
                     <small>🔒 개인정보 보호 강화 모드로 재생됩니다. 빨리감기가 제한됩니다.</small>
                 </div>
             `,
-            duration: 10, // 10초 (초 단위)
+            duration: 125, // 2분 5초 (초 단위)
             fallbackMessage: `
                 <div class="video-fallback">
                     <h3>⚠️ YouTube 영상 로드 실패</h3>
@@ -414,8 +414,8 @@ const VideoManager = {
     },
 
     startRealVideoTracking() {
-        // 실제 영상용 5분 추적
-        const videoDurationSeconds = 300; // 5분
+        // 실제 영상용 2분 5초 추적 (YouTube 영상 실제 길이)
+        const videoDurationSeconds = 125; // 2분 5초
         let currentTime = 0;
 
         const progressFill = document.getElementById('video-progress-fill');
@@ -432,10 +432,11 @@ const VideoManager = {
             const currentMinutes = Math.floor(currentTime / 60);
             const currentSeconds = currentTime % 60;
             const totalMinutes = Math.floor(videoDurationSeconds / 60);
+            const totalSeconds = videoDurationSeconds % 60;
 
             if (timeDisplay) {
                 timeDisplay.textContent =
-                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
+                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
             }
 
             // 오버레이 제거됨
@@ -443,12 +444,12 @@ const VideoManager = {
             if (currentTime >= videoDurationSeconds * 0.9) { // 90% 시청 시 완료
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
-                
+
                 // 영상 완료 시 보호 오버레이 제거 (자유롭게 조작 가능)
                 if (protectionOverlay) {
                     protectionOverlay.style.display = 'none';
                 }
-                
+
                 if (completeBtn) {
                     completeBtn.style.display = 'block';
                     completeBtn.scrollIntoView({ behavior: 'smooth' });
@@ -544,21 +545,21 @@ const VideoManager = {
         const completeBtn = document.getElementById('video-complete-btn');
 
         if (progressFill) progressFill.style.width = '0%';
-        if (timeDisplay) timeDisplay.textContent = '00:00 / 05:00';
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
         if (completeBtn) completeBtn.style.display = 'none';
 
         // 버튼 상태 업데이트
         this.updateControlButtons();
-        
+
         // 영상 추적 재시작
         this.startRealVideoTracking();
-        
+
         console.log('영상이 처음부터 재시작되었습니다');
     },
 
     pauseVideo() {
         console.log('영상 일시정지');
-        
+
         // 진행률 추적 일시정지
         if (this.videoState.progressInterval) {
             clearInterval(this.videoState.progressInterval);
@@ -571,7 +572,7 @@ const VideoManager = {
 
     resumeVideo() {
         console.log('영상 재생 재개');
-        
+
         // 진행률 추적 재개
         if (this.videoState.isPaused) {
             this.videoState.isPaused = false;
@@ -583,7 +584,7 @@ const VideoManager = {
     },
 
     continueVideoTracking() {
-        const videoDurationSeconds = 300; // 5분
+        const videoDurationSeconds = 125; // 2분 5초
         const progressFill = document.getElementById('video-progress-fill');
         const timeDisplay = document.getElementById('video-time-display');
         const completeBtn = document.getElementById('video-complete-btn');
@@ -599,16 +600,17 @@ const VideoManager = {
             const currentMinutes = Math.floor(this.videoState.currentProgress / 60);
             const currentSeconds = this.videoState.currentProgress % 60;
             const totalMinutes = Math.floor(videoDurationSeconds / 60);
+            const totalSeconds = videoDurationSeconds % 60;
 
             if (timeDisplay) {
                 timeDisplay.textContent =
-                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:00`;
+                    `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
             }
 
             if (this.videoState.currentProgress >= videoDurationSeconds * 0.9) {
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
-                
+
                 if (completeBtn) {
                     completeBtn.style.display = 'block';
                     completeBtn.scrollIntoView({ behavior: 'smooth' });
@@ -984,7 +986,7 @@ const App = {
         try {
             // 백엔드에서 정답 확인
             const isAllCorrect = await this.checkQuizAnswersWithAPI();
-            
+
             if (isAllCorrect) {
                 // 모든 문제를 맞춘 경우 완료 화면으로 이동
                 console.log('모든 문제 정답! 완료 화면으로 이동');
@@ -1063,14 +1065,14 @@ const App = {
             // 확인 버튼 클릭 시 동영상 페이지로 이동
             modalCloseBtn.onclick = () => {
                 modal.style.display = 'none';
-                
+
                 // 영상 완료 상태 초기화
                 userSession.videoCompleted = false;
-                
+
                 // 동영상 페이지로 이동
                 VideoManager.setupVideoPlayer();
                 ScreenManager.showScreen('video');
-                
+
                 console.log('동영상 페이지로 돌아갔습니다.');
             };
         }
