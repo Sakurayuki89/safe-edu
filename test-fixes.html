@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>버그 수정 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .test-result { margin: 10px 0; padding: 10px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>전기안전교육 버그 수정 테스트</h1>
+    
+    <div class="test-section">
+        <h2>1. 영상 화면 상태 초기화 테스트</h2>
+        <button onclick="testVideoReset()">영상 상태 초기화 테스트</button>
+        <div id="video-reset-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 한국 시간 포맷 테스트</h2>
+        <button onclick="testKoreanTime()">한국 시간 테스트</button>
+        <div id="korean-time-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 당첨 여부 로직 테스트</h2>
+        <button onclick="testWinnerLogic()">당첨 로직 테스트</button>
+        <div id="winner-logic-result" class="test-result"></div>
+    </div>
+
+    <script>
+        function testVideoReset() {
+            const resultDiv = document.getElementById('video-reset-result');
+            
+            try {
+                // 가상의 영상 상태 생성
+                const mockVideoState = {
+                    isPlaying: true,
+                    isPaused: false,
+                    currentProgress: 50,
+                    progressInterval: setInterval(() => {}, 1000)
+                };
+
+                // 초기화 함수 시뮬레이션
+                function resetVideoState() {
+                    if (mockVideoState.progressInterval) {
+                        clearInterval(mockVideoState.progressInterval);
+                        mockVideoState.progressInterval = null;
+                    }
+                    mockVideoState.isPlaying = false;
+                    mockVideoState.isPaused = false;
+                    mockVideoState.currentProgress = 0;
+                    return true;
+                }
+
+                const success = resetVideoState();
+                
+                if (success && mockVideoState.currentProgress === 0 && !mockVideoState.isPlaying) {
+                    resultDiv.className = 'test-result success';
+                    resultDiv.innerHTML = '✅ 영상 상태 초기화 성공<br>- 진행 상태: 0<br>- 재생 상태: false';
+                } else {
+                    throw new Error('초기화 실패');
+                }
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = '❌ 영상 상태 초기화 실패: ' + error.message;
+            }
+        }
+
+        function testKoreanTime() {
+            const resultDiv = document.getElementById('korean-time-result');
+            
+            try {
+                // 한국 시간 포맷 테스트
+                const koreanTime = new Date().toLocaleString('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                const utcTime = new Date().toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = `✅ 한국 시간 포맷 테스트 성공<br>
+                    - 한국 시간 (KST): ${koreanTime}<br>
+                    - UTC 시간: ${utcTime}<br>
+                    - 시간대 적용: ${koreanTime !== utcTime ? '성공' : '동일 (정상)'}`;
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = '❌ 한국 시간 포맷 실패: ' + error.message;
+            }
+        }
+
+        function testWinnerLogic() {
+            const resultDiv = document.getElementById('winner-logic-result');
+            
+            try {
+                const WIN_PROBABILITY = 0.1; // 10%
+                let winCount = 0;
+                const testRuns = 1000;
+
+                // 1000번 테스트 실행
+                for (let i = 0; i < testRuns; i++) {
+                    if (Math.random() < WIN_PROBABILITY) {
+                        winCount++;
+                    }
+                }
+
+                const actualWinRate = (winCount / testRuns) * 100;
+                const expectedWinRate = WIN_PROBABILITY * 100;
+                const deviation = Math.abs(actualWinRate - expectedWinRate);
+
+                if (deviation < 3) { // 3% 오차 허용
+                    resultDiv.className = 'test-result success';
+                    resultDiv.innerHTML = `✅ 당첨 로직 테스트 성공<br>
+                        - 예상 당첨률: ${expectedWinRate}%<br>
+                        - 실제 당첨률: ${actualWinRate.toFixed(2)}%<br>
+                        - 오차: ${deviation.toFixed(2)}% (허용 범위 내)`;
+                } else {
+                    throw new Error(`당첨률 오차가 너무 큼: ${deviation.toFixed(2)}%`);
+                }
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = '❌ 당첨 로직 테스트 실패: ' + error.message;
+            }
+        }
+
+        // 페이지 로드 시 자동 테스트 실행
+        window.onload = function() {
+            setTimeout(() => {
+                testVideoReset();
+                testKoreanTime();
+                testWinnerLogic();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

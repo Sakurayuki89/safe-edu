@@ -1,5 +1,5 @@
 // ========================================
-// 📋 교육 완료 처리 API (Netlify Functions)
+// ✅ 퀴즈 정답 확인 API (Netlify Functions)
 // ========================================
 
 const { google } = require('googleapis');
@@ -35,62 +35,51 @@ exports.handler = async (event, context) => {
     }
     
     try {
-        const { name, zodiac, employeeId, quizAnswers, rowNumber, isWinner } = JSON.parse(event.body || '{}');
+        // 요청 데이터 파싱
+        const requestData = JSON.parse(event.body);
+        const { answers } = requestData;
         
-        // 필수 데이터 검증
-        if (!name || !zodiac || !employeeId || !quizAnswers || !rowNumber) {
+        if (!answers || !Array.isArray(answers)) {
             return {
                 statusCode: 400,
                 headers,
                 body: JSON.stringify({
-                    error: 'Missing required fields',
-                    message: '필수 데이터가 누락되었습니다.',
-                    required: ['name', 'zodiac', 'employeeId', 'quizAnswers', 'rowNumber']
+                    success: false,
+                    error: 'Invalid request',
+                    message: '답변 데이터가 올바르지 않습니다.'
                 })
             };
         }
         
-        // Google Sheets에서 퀴즈 정답 데이터 가져오기
+        // Google Sheets에서 퀴즈 정답 가져오기
         const quizData = await getQuizDataFromSheets();
         
-        // 퀴즈 점수 계산
-        const quizScore = calculateQuizScore(quizAnswers, quizData);
+        // 정답 확인
+        const results = [];
+        let correctCount = 0;
         
-        // 한국 시간 기준으로 완료 시간 생성
-        const completionTime = new Date().toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
+        answers.forEach((userAnswer, index) => {
+            const question = quizData[index];
+            if (question) {
+                const isCorrect = userAnswer === question.correctAnswer;
+                if (isCorrect) correctCount++;
+                
+                console.log(`문제 ${index + 1}: 사용자답변=${userAnswer}, 정답=${question.correctAnswer}, 정답여부=${isCorrect}`);
+                
+                results.push({
+                    questionId: question.id,
+                    userAnswer: userAnswer,
+                    correctAnswer: question.correctAnswer,
+                    isCorrect: isCorrect
+                });
+            }
         });
         
-        // Google Sheets 인증 설정
-        const auth = await getGoogleAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
+        const totalQuestions = quizData.length;
+        const isAllCorrect = correctCount === totalQuestions;
+        const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
         
-        const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-        
-        // 기존 행 업데이트 (D, E, F, G, H 컬럼)
-        // D: Status, E: EmployeeID, F: QuizScore, G: IsWinner, H: CompletionTime
-        const range = `교육참가자!D${rowNumber}:H${rowNumber}`;
-        const values = [[
-            '완료',  // 상태를 "진행중"에서 "완료"로 변경
-            employeeId,
-            quizScore,
-            isWinner ? '당첨' : '미당첨',
-            completionTime
-        ]];
-        
-        await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range,
-            valueInputOption: 'RAW',
-            resource: { values }
-        });
+        console.log(`최종 결과: ${correctCount}/${totalQuestions} 정답 (${scorePercentage}%), 모든문제정답=${isAllCorrect}`);
         
         // 성공 응답
         return {
@@ -98,20 +87,18 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: true,
-                message: '교육이 성공적으로 완료되었습니다.',
                 data: {
-                    name,
-                    zodiac,
-                    employeeId,
-                    quizScore,
-                    isWinner,
-                    completionTime
+                    isAllCorrect: isAllCorrect,
+                    correctCount: correctCount,
+                    totalQuestions: totalQuestions,
+                    scorePercentage: scorePercentage,
+                    results: results
                 }
             })
         };
         
     } catch (error) {
-        console.error('교육 완료 처리 중 오류 발생:', error);
+        console.error('퀴즈 정답 확인 중 오류 발생:', error);
         
         return {
             statusCode: 500,
@@ -119,7 +106,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: false,
                 error: 'Server error',
-                message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                message: '퀴즈 정답 확인 중 오류가 발생했습니다.'
             })
         };
     }
@@ -202,44 +189,9 @@ function getDefaultQuizData() {
 }
 
 // ========================================
-// 📊 퀴즈 점수 계산 함수
-// ========================================
-function calculateQuizScore(userAnswers, quizData) {
-    if (!Array.isArray(userAnswers) || !Array.isArray(quizData)) {
-        return '0/0';
-    }
-    
-    let correctCount = 0;
-    const totalQuestions = Math.min(userAnswers.length, quizData.length);
-    
-    for (let i = 0; i < totalQuestions; i++) {
-        if (userAnswers[i] === quizData[i].correctAnswer) {
-            correctCount++;
-        }
-    }
-    
-    return `${correctCount}/${totalQuestions}`;
-}
-
-// ========================================
-// 🔐 Google 인증 설정
+// 🔐 Google Sheets 인증 설정
 // ========================================
 async function getGoogleAuth() {
-    // 필수 환경 변수 확인
-    const requiredEnvVars = [
-        'GOOGLE_PROJECT_ID',
-        'GOOGLE_PRIVATE_KEY_ID', 
-        'GOOGLE_PRIVATE_KEY',
-        'GOOGLE_SERVICE_ACCOUNT_EMAIL',
-        'GOOGLE_CLIENT_ID',
-        'GOOGLE_SHEETS_ID'
-    ];
-    
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    if (missingVars.length > 0) {
-        throw new Error(`필수 환경 변수가 누락되었습니다: ${missingVars.join(', ')}`);
-    }
-    
     const credentials = {
         type: 'service_account',
         project_id: process.env.GOOGLE_PROJECT_ID,
@@ -250,13 +202,13 @@ async function getGoogleAuth() {
         auth_uri: 'https://accounts.google.com/o/oauth2/auth',
         token_uri: 'https://oauth2.googleapis.com/token',
         auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}`
+        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL)}`
     };
-    
+
     const auth = new google.auth.GoogleAuth({
         credentials,
         scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
-    
-    return auth;
+
+    return await auth.getClient();
 }

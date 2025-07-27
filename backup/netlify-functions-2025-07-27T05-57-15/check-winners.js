@@ -1,14 +1,16 @@
 // ========================================
-// 🚀 교육 시작 처리 API (Netlify Functions)
+// 🏆 당첨자 수 확인 API (Netlify Functions)
 // ========================================
 
 const { google } = require('googleapis');
+
+const MAX_WINNERS = 100; // 최대 당첨자 수
 
 exports.handler = async (event, context) => {
     // CORS 헤더 설정
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     };
@@ -22,87 +24,40 @@ exports.handler = async (event, context) => {
         };
     }
     
-    // POST 요청만 허용
-    if (event.httpMethod !== 'POST') {
+    // GET 요청만 허용
+    if (event.httpMethod !== 'GET') {
         return {
             statusCode: 405,
             headers,
             body: JSON.stringify({ 
                 error: 'Method not allowed',
-                message: 'POST 요청만 허용됩니다.' 
+                message: 'GET 요청만 허용됩니다.' 
             })
         };
     }
     
     try {
-        const { name, zodiac } = JSON.parse(event.body || '{}');
-        
-        // 필수 데이터 검증
-        if (!name || !zodiac) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({
-                    error: 'Missing required fields',
-                    message: '이름과 띠 정보가 필요합니다.',
-                    required: ['name', 'zodiac']
-                })
-            };
-        }
-        
-        // 한국 시간 기준으로 시작 시간 생성
-        const startTime = new Date().toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-        
         // Google Sheets 인증 설정
         const auth = await getGoogleAuth();
         const sheets = google.sheets({ version: 'v4', auth });
         
         const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+        const range = '교육참가자!G:G'; // 당첨여부 컬럼 (G열)
         
-        // 새 행 추가 (A, B, C, D 컬럼)
-        // A: Name, B: Zodiac, C: StartTime, D: Status
-        const range = '교육참가자!A:D';
-        const values = [[
-            name,
-            zodiac,
-            startTime,
-            '진행중'
-        ]];
-        
-        const appendResponse = await sheets.spreadsheets.values.append({
+        // Google Sheets에서 당첨여부 데이터 조회
+        const response = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range,
-            valueInputOption: 'RAW',
-            insertDataOption: 'INSERT_ROWS',
-            resource: { values }
+            range
         });
         
-        // 추가된 행 번호 계산
-        const updatedRange = appendResponse.data.updates.updatedRange;
-        let rowNumber;
+        const values = response.data.values || [];
         
-        try {
-            // 예: "교육참가자!A2:D2" -> "2"
-            const rangeMatch = updatedRange.match(/!([A-Z]+)(\d+):/);
-            if (rangeMatch && rangeMatch[2]) {
-                rowNumber = parseInt(rangeMatch[2]);
-            } else {
-                throw new Error('행 번호 파싱 실패');
-            }
-        } catch (parseError) {
-            console.error('행 번호 파싱 오류:', parseError, 'Range:', updatedRange);
-            // 기본값으로 현재 시간 기반 행 번호 생성
-            rowNumber = Date.now() % 10000;
-        }
+        // 헤더 제외하고 당첨자 수 계산
+        const winnerCount = values.slice(1).filter(row => 
+            row[0] && (row[0].toString().toLowerCase() === 'true' || row[0] === '당첨')
+        ).length;
+        
+        const canWin = winnerCount < MAX_WINNERS;
         
         // 성공 응답
         return {
@@ -110,18 +65,17 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: true,
-                message: '교육이 시작되었습니다.',
                 data: {
-                    name,
-                    zodiac,
-                    startTime,
-                    rowNumber
+                    currentWinners: winnerCount,
+                    maxWinners: MAX_WINNERS,
+                    canWin: canWin,
+                    remainingSlots: Math.max(0, MAX_WINNERS - winnerCount)
                 }
             })
         };
         
     } catch (error) {
-        console.error('교육 시작 처리 중 오류 발생:', error);
+        console.error('당첨자 수 확인 중 오류 발생:', error);
         
         return {
             statusCode: 500,
@@ -129,7 +83,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: false,
                 error: 'Server error',
-                message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                message: '당첨자 수를 확인하는 중 오류가 발생했습니다.'
             })
         };
     }

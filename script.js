@@ -158,6 +158,11 @@ const ScreenManager = {
             screen.classList.remove('active');
         });
 
+        // 영상 화면으로 돌아갈 때 상태 초기화
+        if (screenId === 'video') {
+            this.resetVideoScreenState();
+        }
+
         // 대상 화면 보이기
         const targetScreen = document.getElementById(screenId);
         if (targetScreen) {
@@ -165,6 +170,24 @@ const ScreenManager = {
             this.currentScreen = screenId;
             this.updateProgress(screenId);
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    },
+
+    resetVideoScreenState() {
+        console.log('영상 화면 상태 초기화');
+        
+        // 시청 완료 버튼 숨기기
+        const completeBtn = document.getElementById('video-complete-btn');
+        if (completeBtn) {
+            completeBtn.style.display = 'none';
+        }
+
+        // 영상 완료 상태 초기화 (다시 시청할 수 있도록)
+        userSession.videoCompleted = false;
+
+        // VideoManager의 상태 초기화 호출
+        if (typeof VideoManager !== 'undefined' && VideoManager.resetVideoState) {
+            VideoManager.resetVideoState();
         }
     },
 
@@ -226,6 +249,9 @@ const VideoManager = {
         }
 
         this.setupVideoControls();
+        
+        // 초기 진행바 상태 설정
+        this.initializeProgressBar();
     },
 
     validateVideoId() {
@@ -302,14 +328,14 @@ const VideoManager = {
                 </div>
             `;
 
-            // 영상 컨트롤 설정
-            this.setupVideoControls();
+            // YouTube Player API 초기화
+            this.initializeYouTubePlayer();
 
             // 영상 로드 실패 감지 및 fallback 처리
             this.setupVideoFallback(container, videoConfig);
 
-            // 실제 영상 추적 시작
-            this.startRealVideoTracking(videoConfig.duration);
+            // YouTube Player API 초기화 후 재생 대기 상태
+            console.log('YouTube 영상 로드 완료 - 재생 버튼을 눌러주세요');
         }, 500);
     },
 
@@ -411,6 +437,14 @@ const VideoManager = {
     },
 
     startRealVideoTracking() {
+        // 이미 추적 중이면 중복 실행 방지
+        if (this.videoState.progressInterval) {
+            console.log('이미 영상 추적 중입니다.');
+            return;
+        }
+
+        console.log('🎬 영상 진행바 추적 시작');
+        
         // 실제 영상용 2분 5초 추적 (YouTube 영상 실제 길이)
         const videoDurationSeconds = 125; // 2분 5초
         let currentTime = 0;
@@ -451,7 +485,78 @@ const VideoManager = {
         }, 1000);
     },
 
-    // YouTube API 관련 함수들 제거 - 간단한 컨트롤로 변경
+    initializeYouTubePlayer() {
+        // YouTube Player API가 로드되지 않은 경우 로드
+        if (typeof YT === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(script);
+            
+            window.onYouTubeIframeAPIReady = () => {
+                this.createYouTubePlayer();
+            };
+        } else {
+            this.createYouTubePlayer();
+        }
+    },
+
+    createYouTubePlayer() {
+        // iframe이 로드된 후 Player API 연결 시도
+        setTimeout(() => {
+            try {
+                const iframe = document.getElementById('youtube-player');
+                if (iframe) {
+                    this.youtubePlayer = new YT.Player('youtube-player', {
+                        events: {
+                            'onReady': (event) => {
+                                console.log('YouTube Player 준비 완료');
+                                this.setupVideoControls();
+                            },
+                            'onStateChange': (event) => {
+                                this.handleYouTubeStateChange(event);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('YouTube Player API 초기화 실패, 기본 추적 시작:', error);
+                this.startRealVideoTracking();
+            }
+        }, 1000);
+    },
+
+    handleYouTubeStateChange(event) {
+        console.log('YouTube 상태 변경:', event.data);
+        
+        // YouTube 플레이어 상태 변경 감지
+        if (event.data === YT.PlayerState.PLAYING) {
+            console.log('▶️ YouTube 영상 재생 시작 - 진행바 추적 시작');
+            this.videoState.isPlaying = true;
+            this.videoState.isPaused = false;
+            
+            // 진행바 추적이 아직 시작되지 않았다면 시작
+            if (!this.videoState.progressInterval) {
+                this.startRealVideoTracking();
+            }
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            console.log('⏸️ YouTube 영상 일시정지');
+            this.videoState.isPaused = true;
+        } else if (event.data === YT.PlayerState.ENDED) {
+            console.log('🏁 YouTube 영상 종료');
+            this.handleVideoComplete();
+        }
+    },
+
+    handleVideoComplete() {
+        clearInterval(this.videoState.progressInterval);
+        userSession.videoCompleted = true;
+        
+        const completeBtn = document.getElementById('video-complete-btn');
+        if (completeBtn) {
+            completeBtn.style.display = 'block';
+            completeBtn.scrollIntoView({ behavior: 'smooth' });
+        }
+    },
 
     updateControlButtons() {
         const pauseBtn = document.getElementById('video-pause-btn');
@@ -469,6 +574,30 @@ const VideoManager = {
     setupVideoControls() {
         // 영상 컨트롤 버튼들이 제거되어 더 이상 필요하지 않음
         console.log('영상 컨트롤 설정 완료 (버튼 제거됨)');
+    },
+
+    initializeProgressBar() {
+        // 영상 상태 초기화
+        this.videoState.isPlaying = false;
+        this.videoState.isPaused = false;
+        this.videoState.currentProgress = 0;
+        this.videoState.pausedAt = 0;
+        if (this.videoState.progressInterval) {
+            clearInterval(this.videoState.progressInterval);
+            this.videoState.progressInterval = null;
+        }
+        userSession.videoCompleted = false;
+
+        // 진행바 초기 상태 설정
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
+
+        if (progressFill) progressFill.style.width = '0%';
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
+        if (completeBtn) completeBtn.style.display = 'none';
+
+        console.log('📊 진행바 초기화 완료 - YouTube 재생 버튼을 눌러주세요');
     },
 
     startVideoSimulation() {
@@ -540,6 +669,43 @@ const VideoManager = {
                 }
             }
         }, 1000);
+    },
+
+    // 영상 상태 완전 초기화 메서드
+    resetVideoState() {
+        console.log('VideoManager 상태 초기화');
+        
+        // 진행 중인 인터벌 정리
+        if (this.videoState.progressInterval) {
+            clearInterval(this.videoState.progressInterval);
+            this.videoState.progressInterval = null;
+        }
+
+        // 영상 상태 초기화
+        this.videoState.isPlaying = false;
+        this.videoState.isPaused = false;
+        this.videoState.currentProgress = 0;
+        this.videoState.pausedAt = 0;
+
+        // UI 요소 초기화
+        const progressFill = document.getElementById('video-progress-fill');
+        const timeDisplay = document.getElementById('video-time-display');
+        const completeBtn = document.getElementById('video-complete-btn');
+
+        if (progressFill) progressFill.style.width = '0%';
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 02:05';
+        if (completeBtn) completeBtn.style.display = 'none';
+
+        // YouTube 플레이어가 있다면 정지
+        if (this.youtubePlayer && typeof this.youtubePlayer.stopVideo === 'function') {
+            try {
+                this.youtubePlayer.stopVideo();
+            } catch (error) {
+                console.warn('YouTube 플레이어 정지 중 오류:', error);
+            }
+        }
+
+        console.log('영상 상태 초기화 완료');
     }
 };
 

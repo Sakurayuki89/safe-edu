@@ -56,9 +56,8 @@ exports.handler = async (event, context) => {
         // 퀴즈 점수 계산
         const quizScore = calculateQuizScore(quizAnswers, quizData);
         
-        // 한국 시간 기준으로 완료 시간 생성
+        // 완료 시간 생성
         const completionTime = new Date().toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -74,11 +73,10 @@ exports.handler = async (event, context) => {
         
         const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
         
-        // 기존 행 업데이트 (D, E, F, G, H 컬럼)
-        // D: Status, E: EmployeeID, F: QuizScore, G: IsWinner, H: CompletionTime
-        const range = `교육참가자!D${rowNumber}:H${rowNumber}`;
+        // 기존 행 업데이트 (E, F, G, H 컬럼)
+        // E: EmployeeID, F: QuizScore, G: IsWinner, H: CompletionTime
+        const range = `교육참가자!E${rowNumber}:H${rowNumber}`;
         const values = [[
-            '완료',  // 상태를 "진행중"에서 "완료"로 변경
             employeeId,
             quizScore,
             isWinner ? '당첨' : '미당첨',

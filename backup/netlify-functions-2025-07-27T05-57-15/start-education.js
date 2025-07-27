@@ -50,9 +50,8 @@ exports.handler = async (event, context) => {
             };
         }
         
-        // 한국 시간 기준으로 시작 시간 생성
+        // 시작 시간 생성
         const startTime = new Date().toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',

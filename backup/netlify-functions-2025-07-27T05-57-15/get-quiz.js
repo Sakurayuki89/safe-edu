@@ -1,5 +1,5 @@
 // ========================================
-// 📋 교육 완료 처리 API (Netlify Functions)
+// 📚 퀴즈 문제 조회 API (Netlify Functions)
 // ========================================
 
 const { google } = require('googleapis');
@@ -8,7 +8,7 @@ exports.handler = async (event, context) => {
     // CORS 헤더 설정
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     };
@@ -22,75 +22,28 @@ exports.handler = async (event, context) => {
         };
     }
     
-    // POST 요청만 허용
-    if (event.httpMethod !== 'POST') {
+    // GET 요청만 허용
+    if (event.httpMethod !== 'GET') {
         return {
             statusCode: 405,
             headers,
             body: JSON.stringify({ 
                 error: 'Method not allowed',
-                message: 'POST 요청만 허용됩니다.' 
+                message: 'GET 요청만 허용됩니다.' 
             })
         };
     }
     
     try {
-        const { name, zodiac, employeeId, quizAnswers, rowNumber, isWinner } = JSON.parse(event.body || '{}');
-        
-        // 필수 데이터 검증
-        if (!name || !zodiac || !employeeId || !quizAnswers || !rowNumber) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({
-                    error: 'Missing required fields',
-                    message: '필수 데이터가 누락되었습니다.',
-                    required: ['name', 'zodiac', 'employeeId', 'quizAnswers', 'rowNumber']
-                })
-            };
-        }
-        
-        // Google Sheets에서 퀴즈 정답 데이터 가져오기
+        // Google Sheets에서 퀴즈 데이터 가져오기
         const quizData = await getQuizDataFromSheets();
         
-        // 퀴즈 점수 계산
-        const quizScore = calculateQuizScore(quizAnswers, quizData);
-        
-        // 한국 시간 기준으로 완료 시간 생성
-        const completionTime = new Date().toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-        
-        // Google Sheets 인증 설정
-        const auth = await getGoogleAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
-        
-        const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-        
-        // 기존 행 업데이트 (D, E, F, G, H 컬럼)
-        // D: Status, E: EmployeeID, F: QuizScore, G: IsWinner, H: CompletionTime
-        const range = `교육참가자!D${rowNumber}:H${rowNumber}`;
-        const values = [[
-            '완료',  // 상태를 "진행중"에서 "완료"로 변경
-            employeeId,
-            quizScore,
-            isWinner ? '당첨' : '미당첨',
-            completionTime
-        ]];
-        
-        await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range,
-            valueInputOption: 'RAW',
-            resource: { values }
-        });
+        // 정답을 제외하고 문제와 보기만 반환
+        const quizQuestions = quizData.map(({ id, question, options }) => ({
+            id,
+            question,
+            options
+        }));
         
         // 성공 응답
         return {
@@ -98,20 +51,13 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: true,
-                message: '교육이 성공적으로 완료되었습니다.',
-                data: {
-                    name,
-                    zodiac,
-                    employeeId,
-                    quizScore,
-                    isWinner,
-                    completionTime
-                }
+                data: quizQuestions,
+                totalQuestions: quizQuestions.length
             })
         };
         
     } catch (error) {
-        console.error('교육 완료 처리 중 오류 발생:', error);
+        console.error('퀴즈 데이터 조회 중 오류 발생:', error);
         
         return {
             statusCode: 500,
@@ -119,7 +65,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: false,
                 error: 'Server error',
-                message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                message: '퀴즈 데이터를 가져오는 중 오류가 발생했습니다.'
             })
         };
     }
@@ -199,26 +145,6 @@ function getDefaultQuizData() {
             correctAnswer: 0 // "턱끈을 조임"
         }
     ];
-}
-
-// ========================================
-// 📊 퀴즈 점수 계산 함수
-// ========================================
-function calculateQuizScore(userAnswers, quizData) {
-    if (!Array.isArray(userAnswers) || !Array.isArray(quizData)) {
-        return '0/0';
-    }
-    
-    let correctCount = 0;
-    const totalQuestions = Math.min(userAnswers.length, quizData.length);
-    
-    for (let i = 0; i < totalQuestions; i++) {
-        if (userAnswers[i] === quizData[i].correctAnswer) {
-            correctCount++;
-        }
-    }
-    
-    return `${correctCount}/${totalQuestions}`;
 }
 
 // ========================================
