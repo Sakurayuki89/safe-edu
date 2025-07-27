@@ -9,7 +9,7 @@ const CONFIG = {
     YOUTUBE_VIDEO_ID: 'HggDt3GUGYo', // YouTube 영상 ID
     DEVELOPMENT_MODE: window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
     LOADING_DELAY: 0, // 즉시 로딩
-    VIDEO_SIMULATION_DURATION: 10,
+    VIDEO_SIMULATION_DURATION: 15,
     WIN_PROBABILITY: 0.1,
     MAX_WINNERS: 100
 };
@@ -23,7 +23,8 @@ const userSession = {
     quizData: [],
     videoCompleted: false,
     quizScore: 0,  // 시청 완료 버튼 클릭 횟수
-    rowNumber: null  // Google Sheets 행 번호
+    rowNumber: null,  // Google Sheets 행 번호
+    isSubmitted: false  // 최종 제출 완료 플래그
 };
 
 const FORTUNE_DATA = {
@@ -471,7 +472,7 @@ const VideoManager = {
 
             // 오버레이 제거됨
 
-            if (currentTime >= videoDurationSeconds * 0.9) { // 90% 시청 시 완료
+            if (currentTime >= videoDurationSeconds) { // 100% 시청 시 완료
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
 
@@ -659,7 +660,7 @@ const VideoManager = {
                     `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
             }
 
-            if (this.videoState.currentProgress >= videoDurationSeconds * 0.9) {
+            if (this.videoState.currentProgress >= videoDurationSeconds) {
                 clearInterval(this.videoState.progressInterval);
                 userSession.videoCompleted = true;
 
@@ -1123,7 +1124,7 @@ const App = {
             if (answeredQuestions === totalQuestions) {
                 submitBtn.innerHTML = `
                     <span class="btn-icon">✅</span>
-                    답변 확인하러 가기
+                    제출하기
                 `;
                 submitBtn.classList.add('btn-ready');
             } else {
@@ -1155,19 +1156,36 @@ const App = {
     async handleQuizSubmit() {
         console.log('퀴즈 제출 처리');
 
-        // 답변 수집
+        // 답변 수집 (개선된 오류 처리)
         userSession.quizAnswers = [];
+        let hasIncompleteAnswers = false;
+        
         userSession.quizData.forEach((question, index) => {
             const selectedOption = document.querySelector(`input[name="question-${question.id}"]:checked`);
             if (selectedOption) {
                 // 1-based에서 0-based로 변환 (백엔드에서 0-based index 사용)
                 const userAnswer = parseInt(selectedOption.value) - 1;
-                userSession.quizAnswers.push(userAnswer);
-                console.log(`문제 ${index + 1}: 사용자 답변 = ${userAnswer}, 선택한 옵션 = ${selectedOption.value}`);
+                
+                // 유효성 검사
+                if (isNaN(userAnswer) || userAnswer < 0 || userAnswer >= question.options.length) {
+                    console.error(`문제 ${index + 1}: 잘못된 답변 값 = ${selectedOption.value}`);
+                    hasIncompleteAnswers = true;
+                    userSession.quizAnswers.push(0); // 기본값으로 첫 번째 옵션
+                } else {
+                    userSession.quizAnswers.push(userAnswer);
+                    console.log(`문제 ${index + 1}: 사용자 답변 = ${userAnswer}, 선택한 옵션 = ${selectedOption.value}`);
+                }
             } else {
                 console.error(`문제 ${index + 1}: 답변이 선택되지 않았습니다.`);
+                hasIncompleteAnswers = true;
+                userSession.quizAnswers.push(0); // 기본값으로 첫 번째 옵션
             }
         });
+
+        // 불완전한 답변이 있는 경우 경고
+        if (hasIncompleteAnswers) {
+            console.warn('일부 답변이 불완전합니다. 기본값으로 처리됩니다.');
+        }
 
         console.log('수집된 답변 (0-based):', userSession.quizAnswers);
         console.log('퀴즈 데이터:', userSession.quizData);
@@ -1179,6 +1197,11 @@ const App = {
         this.debugQuizAnswers();
 
         try {
+            // 답변 데이터 유효성 검사
+            if (userSession.quizAnswers.length !== userSession.quizData.length) {
+                throw new Error(`답변 수와 문제 수가 일치하지 않습니다. 답변: ${userSession.quizAnswers.length}, 문제: ${userSession.quizData.length}`);
+            }
+
             // 백엔드에서 정답 확인
             const isAllCorrect = await this.checkQuizAnswersWithAPI();
 
@@ -1195,9 +1218,15 @@ const App = {
             }
         } catch (error) {
             console.error('퀴즈 정답 확인 중 오류:', error);
-            // 오류 발생 시 안전하게 실패 처리 (영상 재시청)
-            alert('정답 확인 중 오류가 발생했습니다. 영상을 다시 시청해주세요.');
-            this.showQuizFailureMessage();
+            
+            // 버튼 상태 복원
+            this.resetQuizSubmitButton();
+            
+            // 더 구체적인 오류 메시지 표시
+            const errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
+            this.showModal('오류 발생', `정답 확인 중 문제가 발생했습니다.\n\n오류 내용: ${errorMessage}\n\n다시 시도하거나 영상을 재시청해주세요.`, () => {
+                // 모달 닫기만 하고 현재 화면 유지 (재시도 가능)
+            });
         }
     },
 
@@ -1205,9 +1234,22 @@ const App = {
         const submitBtn = document.querySelector('#assessment-form button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
             submitBtn.innerHTML = `
                 <span class="btn-icon">⏳</span>
                 정답 확인 중...
+            `;
+        }
+    },
+
+    resetQuizSubmitButton() {
+        const submitBtn = document.querySelector('#assessment-form button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+            submitBtn.innerHTML = `
+                <span class="btn-icon">✅</span>
+                제출하기
             `;
         }
     },
@@ -1232,6 +1274,13 @@ const App = {
 
     async checkQuizAnswersWithAPI() {
         try {
+            // 요청 데이터 검증
+            if (!userSession.quizAnswers || userSession.quizAnswers.length === 0) {
+                throw new Error('답변 데이터가 없습니다.');
+            }
+
+            console.log('API 요청 데이터:', { answers: userSession.quizAnswers });
+
             const response = await Utils.fetchWithTimeout('/.netlify/functions/check-quiz-answers', {
                 method: 'POST',
                 headers: {
@@ -1240,22 +1289,41 @@ const App = {
                 body: JSON.stringify({
                     answers: userSession.quizAnswers
                 })
-            });
+            }, 10000, 2); // 타임아웃 10초, 재시도 2회
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const result = await response.json();
+            console.log('API 응답:', result);
 
             if (result.success && result.data) {
                 console.log(`정답 확인 결과: ${result.data.correctCount}/${result.data.totalQuestions} (${result.data.scorePercentage}%)`);
                 console.log('개별 문제 결과:', result.data.results);
                 console.log('모든 문제 정답 여부:', result.data.isAllCorrect);
+                
+                // 결과 데이터 유효성 검사
+                if (typeof result.data.isAllCorrect !== 'boolean') {
+                    throw new Error('API 응답에서 정답 여부 데이터가 올바르지 않습니다.');
+                }
+                
                 return result.data.isAllCorrect;
             } else {
-                console.error('정답 확인 API 응답 오류:', result);
-                return false;
+                const errorMsg = result.message || result.error || '알 수 없는 API 오류';
+                throw new Error(`API 오류: ${errorMsg}`);
             }
         } catch (error) {
             console.error('정답 확인 API 호출 실패:', error);
-            throw error;
+            
+            // 네트워크 오류와 서버 오류를 구분
+            if (error.name === 'AbortError') {
+                throw new Error('요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.');
+            } else if (error.message.includes('HTTP')) {
+                throw new Error('서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            } else {
+                throw error;
+            }
         }
     },
 
@@ -1430,16 +1498,28 @@ const App = {
         if (employeeIdSection) {
             employeeIdSection.style.display = 'block';
 
-            // 사번 입력 시 버튼 활성화
+            // 사번 입력 시 버튼 활성화 (중복 이벤트 방지)
             const employeeIdInput = document.getElementById('employee-id');
             const finalBtn = document.getElementById('final-complete-btn');
 
             if (employeeIdInput && finalBtn) {
-                employeeIdInput.addEventListener('input', (e) => {
-                    finalBtn.disabled = !Utils.validateEmployeeId(e.target.value);
+                // 기존 이벤트 리스너 제거
+                const newEmployeeIdInput = employeeIdInput.cloneNode(true);
+                const newFinalBtn = finalBtn.cloneNode(true);
+                
+                employeeIdInput.parentNode.replaceChild(newEmployeeIdInput, employeeIdInput);
+                finalBtn.parentNode.replaceChild(newFinalBtn, finalBtn);
+
+                // 새로운 이벤트 리스너 추가
+                newEmployeeIdInput.addEventListener('input', (e) => {
+                    newFinalBtn.disabled = !Utils.validateEmployeeId(e.target.value);
                 });
 
-                finalBtn.addEventListener('click', () => {
+                newFinalBtn.addEventListener('click', () => {
+                    // 중복 제출 방지
+                    if (newFinalBtn.disabled || newFinalBtn.classList.contains('loading')) {
+                        return;
+                    }
                     this.handleFinalSubmit();
                 });
             }
@@ -1449,6 +1529,12 @@ const App = {
     async handleFinalSubmit() {
         console.log('최종 제출 처리');
 
+        // 중복 제출 방지
+        if (userSession.isSubmitted) {
+            console.warn('이미 제출된 상태입니다.');
+            return;
+        }
+
         const employeeId = document.getElementById('employee-id').value;
 
         if (!Utils.validateEmployeeId(employeeId)) {
@@ -1457,6 +1543,7 @@ const App = {
         }
 
         userSession.employeeId = employeeId;
+        userSession.isSubmitted = true; // 제출 상태 플래그 설정
 
         // 버튼 로딩 상태로 변경
         const finalBtn = document.getElementById('final-complete-btn');
@@ -1496,15 +1583,8 @@ const App = {
             const result = await response.json();
 
             if (result.success) {
-                // 성공 처리
-                this.showModal('완료!', `교육이 성공적으로 완료되었습니다!\n\n시청 완료 횟수: ${userSession.quizScore}회\n사번: ${userSession.employeeId}\n\n데이터가 성공적으로 저장되었습니다.`, () => {
-                    // 페이지 닫기
-                    window.close();
-                    // 만약 window.close()가 작동하지 않으면 새로고침으로 초기화
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                });
+                // 성공 처리 - 모든 UI 숨기고 완료 메시지만 표시
+                this.showFinalCompletionMessage();
             } else {
                 // 실패 처리
                 this.showModal('오류 발생', `데이터 저장 중 오류가 발생했습니다.\n\n오류: ${result.error || '알 수 없는 오류'}\n\n다시 시도해주세요.`, () => {
@@ -1530,7 +1610,86 @@ const App = {
         }
     },
 
+    // 🎉 최종 완료 메시지 표시 (더 이상 다른 UI 없음)
+    showFinalCompletionMessage() {
+        console.log('최종 완료 처리');
 
+        // 모든 기존 섹션 숨기기
+        document.querySelectorAll('.completion-summary-section, .lucky-section, #employee-id-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // 완료 메시지 섹션 생성
+        const completionContent = document.querySelector('.completion-content');
+        if (completionContent) {
+            const finalSection = document.createElement('div');
+            finalSection.className = 'final-completion-section';
+            finalSection.innerHTML = `
+                <div class="final-completion-message">
+                    <div class="completion-icon">🎉</div>
+                    <h3>교육 완료!</h3>
+                    <p>전기설비 안전교육이 성공적으로 완료되었습니다.</p>
+                    
+                    <div class="completion-details">
+                        <div class="detail-item">
+                            <span class="detail-label">이름:</span>
+                            <span class="detail-value">${userSession.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">사번:</span>
+                            <span class="detail-value">${userSession.employeeId}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">당첨 여부:</span>
+                            <span class="detail-value ${userSession.isWinner ? 'winner' : 'no-winner'}">
+                                ${userSession.isWinner ? '🎉 당첨' : '😊 참여'}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">완료 시간:</span>
+                            <span class="detail-value">${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
+                        </div>
+                    </div>
+
+                    <div class="final-message">
+                        <p>✅ 데이터가 성공적으로 저장되었습니다.</p>
+                        <p>안전한 작업 환경 조성에 참여해 주셔서 감사합니다!</p>
+                    </div>
+
+                    <div class="final-actions">
+                        <button id="close-window-btn" class="btn btn-primary">창 닫기</button>
+                        <button id="restart-education-btn" class="btn btn-secondary">교육 다시하기</button>
+                    </div>
+                </div>
+            `;
+            
+            // 기존 내용 모두 제거하고 최종 메시지만 표시
+            completionContent.innerHTML = '';
+            completionContent.appendChild(finalSection);
+
+            // 버튼 이벤트 설정
+            setTimeout(() => {
+                const closeBtn = document.getElementById('close-window-btn');
+                const restartBtn = document.getElementById('restart-education-btn');
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        window.close();
+                        // 만약 window.close()가 작동하지 않으면 새로고침으로 초기화
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    });
+                }
+
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', () => {
+                        location.reload();
+                    });
+                }
+            }, 100);
+        }
+    },
 
     showModal(title, message, onClose = null) {
         const modal = document.getElementById('modal-overlay');

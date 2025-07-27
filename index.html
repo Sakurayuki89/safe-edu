@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safe Edu - 전기설비 온라인 안전교육</title>
-    
+
     <!-- 로컬 테스트용: 폰트 로딩 제거 (필요시 주석 해제)
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
     -->
-    
+
     <link rel="stylesheet" href="styles.css">
-    
+
     <!-- YouTube Player API (일시정지 기능을 위해 필요) -->
     <script src="https://www.youtube.com/iframe_api" async></script>
 </head>
+
 <body>
     <!-- 로딩 화면 -->
     <div id="loading" class="loading">
@@ -33,21 +35,21 @@
             <div class="progress-step" data-step="4" title="키워드"></div>
             <div class="progress-step" data-step="5" title="완료"></div>
         </div>
-        
+
         <!-- 1단계: 사용자 정보 입력 화면 -->
         <div id="user-info" class="screen active">
             <div class="screen-content">
                 <h1>Safe Edu</h1>
                 <p style="text-align: center; color: #667eea; font-size: 1.2rem; margin-bottom: 20px;">전기설비 온라인 안전교육</p>
                 <h2>개인정보 입력</h2>
-                
+
                 <form id="user-info-form" class="form-container">
                     <div class="input-group">
                         <label for="user-name">이름</label>
                         <input type="text" id="user-name" name="name" placeholder="이름을 입력해주세요" required>
                         <span class="error-message" id="name-error"></span>
                     </div>
-                    
+
                     <div class="input-group">
                         <label for="user-zodiac">띠 (12지신)</label>
                         <select id="user-zodiac" name="zodiac" required>
@@ -67,7 +69,7 @@
                         </select>
                         <span class="error-message" id="zodiac-error"></span>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary">다음</button>
                 </form>
             </div>
@@ -77,19 +79,19 @@
         <div id="fortune" class="screen">
             <div class="screen-content">
                 <h2>이번 주 운세 & 행운의 번호</h2>
-                
+
                 <div class="fortune-content">
                     <div class="fortune-section">
                         <h3><span id="user-zodiac-display"></span>띠 이번 주 운세</h3>
                         <div id="fortune-text" class="fortune-text"></div>
                     </div>
-                    
+
                     <div class="lottery-section">
                         <h3>🍀 행운의 로또 번호</h3>
                         <div id="lottery-numbers" class="lottery-numbers"></div>
                     </div>
                 </div>
-                
+
                 <button id="start-education-btn" class="btn btn-primary">안전교육 시작</button>
             </div>
         </div>
@@ -98,28 +100,32 @@
         <div id="video" class="screen">
             <div class="screen-content">
                 <h2>전기설비 안전교육 영상</h2>
-                
+
                 <div class="video-container">
                     <div id="video-player" class="video-player">
                         <!-- Google Drive 영상이 여기에 임베드됩니다 -->
                     </div>
-                    
+
                     <div class="video-progress">
                         <div id="video-progress-bar" class="progress-bar">
                             <div id="video-progress-fill" class="progress-fill"></div>
                         </div>
-                        <span id="video-time-display">00:00 / 00:00</span>
                     </div>
-                    
+
+                    <!-- 시간 표시를 별도로 분리하여 밑으로 이동 -->
+                    <div class="video-time-container">
+                        <span id="video-time-display" class="video-time-text">00:00 / 00:00</span>
+                    </div>
+
                     <!-- 영상 시청 안내 메시지 -->
                     <div class="video-guide">
                         <div class="guide-message">
-                            <p>📺 <strong>일정 시청 시간이 지나면 교육 영상 종료 버튼이 나타납니다</strong></p>
+                            <p>📺 <strong>영상을 100% 완료하면 시청 완료 버튼이 나타납니다</strong></p>
                             <small>영상을 끝까지 시청해주세요</small>
                         </div>
                     </div>
                 </div>
-                
+
                 <button id="video-complete-btn" class="btn btn-primary" style="display: none;">시청 완료</button>
             </div>
         </div>
@@ -137,17 +143,17 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <form id="assessment-form" class="assessment-form">
                     <div id="quiz-questions-container" class="quiz-container">
                         <!-- 퀴즈 문제들이 JavaScript로 동적 생성됩니다 -->
                     </div>
-                    
+
                     <div class="assessment-footer">
                         <span class="error-message" id="assessment-error"></span>
                         <button type="submit" class="btn btn-primary btn-large" disabled>
                             <span class="btn-icon">✅</span>
-                            답변 확인하러 가기
+                            제출하기
                         </button>
                     </div>
                 </form>
@@ -159,7 +165,7 @@
             <div class="screen-content">
                 <h2>🎉 교육 완료!</h2>
                 <p>안전교육을 성공적으로 완료하셨습니다.</p>
-                
+
                 <div class="completion-content">
                     <!-- 교육 완료 요약 섹션 -->
                     <div class="completion-summary-section">
@@ -175,7 +181,7 @@
                                     <div id="review-safety-hashtags" class="hashtag-display"></div>
                                 </div>
                             </div>
-                            
+
                             <div class="quiz-summary">
                                 <h3>📋 교육 내용 확인</h3>
                                 <div class="answer-item">
@@ -185,7 +191,7 @@
                                         <span class="answer-content" id="answer1-text"></span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="answer-item">
                                     <div class="question-text">문제 2. 전기 화재 발생 시 올바른 대처 방법은?</div>
                                     <div class="answer-text">
@@ -195,21 +201,23 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="completion-action">
                             <button id="proceed-to-final-btn" class="btn btn-primary btn-large">🍀 행운 이벤트 참여하기</button>
                         </div>
                     </div>
-                    
+
                     <!-- 사번 입력 섹션 (처음에는 숨김) -->
                     <div id="employee-id-section" class="employee-id-section" style="display: none;">
                         <h3>최종 정보 입력</h3>
                         <div class="input-group">
                             <label for="employee-id">사번 (7자리)</label>
-                            <input type="text" id="employee-id" name="employeeId" placeholder="1234567" maxlength="7" pattern="[0-9]{7}">
+                            <input type="text" id="employee-id" name="employeeId" placeholder="1234567" maxlength="7"
+                                pattern="[0-9]{7}">
                             <span class="error-message" id="employee-id-error"></span>
                         </div>
-                        <button id="final-complete-btn" class="btn btn-primary" style="margin-top: 20px;" disabled>최종 완료</button>
+                        <button id="final-complete-btn" class="btn btn-primary" style="margin-top: 20px;" disabled>최종
+                            완료</button>
                     </div>
 
                 </div>
@@ -230,4 +238,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

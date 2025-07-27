@@ -54,6 +54,19 @@ exports.handler = async (event, context) => {
         // Google Sheets에서 퀴즈 정답 가져오기
         const quizData = await getQuizDataFromSheets();
         
+        // 답변 수와 문제 수 일치 확인
+        if (answers.length !== quizData.length) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Data mismatch',
+                    message: `답변 수(${answers.length})와 문제 수(${quizData.length})가 일치하지 않습니다.`
+                })
+            };
+        }
+
         // 정답 확인
         const results = [];
         let correctCount = 0;
@@ -61,6 +74,12 @@ exports.handler = async (event, context) => {
         answers.forEach((userAnswer, index) => {
             const question = quizData[index];
             if (question) {
+                // 답변 유효성 검사
+                if (typeof userAnswer !== 'number' || userAnswer < 0 || userAnswer >= question.options.length) {
+                    console.warn(`문제 ${index + 1}: 잘못된 답변 값 ${userAnswer}, 0으로 처리`);
+                    userAnswer = 0; // 기본값으로 처리
+                }
+                
                 const isCorrect = userAnswer === question.correctAnswer;
                 if (isCorrect) correctCount++;
                 
@@ -70,8 +89,13 @@ exports.handler = async (event, context) => {
                     questionId: question.id,
                     userAnswer: userAnswer,
                     correctAnswer: question.correctAnswer,
-                    isCorrect: isCorrect
+                    isCorrect: isCorrect,
+                    questionText: question.question,
+                    selectedOption: question.options[userAnswer],
+                    correctOption: question.options[question.correctAnswer]
                 });
+            } else {
+                console.error(`문제 ${index + 1}: 퀴즈 데이터가 없습니다.`);
             }
         });
         
