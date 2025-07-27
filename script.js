@@ -22,7 +22,7 @@ const userSession = {
     employeeId: '',
     quizData: [],
     videoCompleted: false,
-    quizScore: 0,  // 시청 완료 버튼 클릭 횟수
+    quizScore: 0,  // 영상 시청 횟수 (시청 완료 버튼 클릭 횟수)
     rowNumber: null,  // Google Sheets 행 번호
     isSubmitted: false  // 최종 제출 완료 플래그
 };
@@ -814,9 +814,9 @@ const App = {
             if (completeBtn) {
                 completeBtn.addEventListener('click', async () => {
                     if (userSession.videoCompleted) {
-                        // Quiz Score 카운터 증가 (시청 완료 버튼 클릭 횟수)
+                        // 영상 시청 횟수 증가 (시청 완료 버튼 클릭 횟수)
                         userSession.quizScore++;
-                        console.log('시청 완료 버튼 클릭 횟수:', userSession.quizScore);
+                        console.log('영상 시청 횟수:', userSession.quizScore);
 
                         await this.setupAssessmentScreen();
                         ScreenManager.showScreen('assessment');
@@ -1550,7 +1550,8 @@ const App = {
                 employeeId: userSession.employeeId,
                 quizAnswers: userSession.quizAnswers,
                 rowNumber: userSession.rowNumber,
-                isWinner: userSession.isWinner
+                isWinner: userSession.isWinner,
+                watchCount: userSession.quizScore  // 영상 시청 횟수 전송
             };
 
             console.log('제출 데이터:', submissionData);

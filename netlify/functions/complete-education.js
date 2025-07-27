@@ -35,7 +35,7 @@ exports.handler = async (event, context) => {
     }
     
     try {
-        const { name, zodiac, employeeId, quizAnswers, rowNumber, isWinner } = JSON.parse(event.body || '{}');
+        const { name, zodiac, employeeId, quizAnswers, rowNumber, isWinner, watchCount } = JSON.parse(event.body || '{}');
         
         // 필수 데이터 검증
         if (!name || !zodiac || !employeeId || !quizAnswers || !rowNumber) {
@@ -49,6 +49,9 @@ exports.handler = async (event, context) => {
                 })
             };
         }
+        
+        // 시청횟수 기본값 설정
+        const viewCount = watchCount || 1;
         
         // Google Sheets에서 퀴즈 정답 데이터 가져오기
         const quizData = await getQuizDataFromSheets();
@@ -75,12 +78,12 @@ exports.handler = async (event, context) => {
         const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
         
         // 기존 행 업데이트 (D, E, F, G, H 컬럼)
-        // D: Status, E: EmployeeID, F: QuizScore, G: IsWinner, H: CompletionTime
+        // D: Status, E: EmployeeID, F: WatchCount, G: IsWinner, H: CompletionTime
         const range = `교육참가자!D${rowNumber}:H${rowNumber}`;
         const values = [[
             '완료',  // 상태를 "진행중"에서 "완료"로 변경
             employeeId,
-            quizScore,
+            viewCount,  // 시청횟수로 변경
             isWinner ? '당첨' : '미당첨',
             completionTime
         ]];
@@ -103,7 +106,7 @@ exports.handler = async (event, context) => {
                     name,
                     zodiac,
                     employeeId,
-                    quizScore,
+                    watchCount: viewCount,
                     isWinner,
                     completionTime
                 }
